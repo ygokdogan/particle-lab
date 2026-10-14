@@ -1,0 +1,10 @@
+# Compiled files
+/main
+*.o
+/build/
+
+# macOS
+.DS_Store
+
+# Local editor settings
+.vscode/
