@@ -19,5 +19,7 @@ namespace sandbox {
             Renderer renderer;
             Brush brush;
             InputHandler inputHandler;
+
+            float getTotalMaterialAmount(const Grid& grid, Material material);
     };
 }

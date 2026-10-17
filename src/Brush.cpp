@@ -12,10 +12,16 @@ namespace sandbox
         if(!grid.isValidCell(x, y)){
             return;
         }
+
+        Behaviour behaviour = getMaterialProperties(selectedMaterial).behaviour;
         
         for(int i = y-(size/2); i <= y+(size/2); i++) {
             for (int j = x-(size/2); j <= x+(size/2); j++) {
-                grid.setCell(j, i, selectedMaterial);
+                if(behaviour == Behaviour::Liquid) {
+                    grid.addLiquid(j, i, selectedMaterial, 1.0f);
+                } else {
+                    grid.placeSolid(j, i, selectedMaterial);
+                }
             }
         }
     }

@@ -14,18 +14,27 @@ namespace sandbox
         for (int y = grid.getHeight() - 1; y >= 0; --y) {
             for (int x = startX; x != endX; x += stepX) {
                 Cell& cell = grid.getCell(x, y);
+
+                std::vector<Material> materials;
+
+                for (const LiquidLayer& layer : cell.liquids) {
+                    materials.push_back(layer.material);
+                }
+                for (Material material : materials) {
+                    if (grid.getLiquidAmount(x, y, material) > 0.0f) {
+                        updateLiquid(grid, x, y, material);
+                    }
+                }
+
                 if (cell.lastUpdatedFrame == currentFrame){
                     continue;
                 }
 
-                const MaterialProperties& properties = getMaterialProperties(cell.material);
+                const MaterialProperties& properties = getMaterialProperties(cell.solid);
 
                 switch (properties.behaviour) {
                     case Behaviour::Powder:
                         updatePowder(grid, x, y);
-                        break;
-                    case Behaviour::Liquid:
-                        updateLiquid(grid, x, y);
                         break;
                     default:
                         break;
@@ -36,113 +45,325 @@ namespace sandbox
         scanLeftToRight = !scanLeftToRight;
     }
 
-    void Simulation::updatePowder(Grid& grid, int x, int y) {
-        if (moveCell(grid, x, y, MoveDirection::Down)) {
+    void Simulation::updatePowder(Grid &grid, int x, int y)
+    {
+        if (moveSolid(grid, x, y, MoveDirection::Down)) {
             return;
         }
 
-        bool canMoveLeft = grid.isEmptyCell(x-1, y+1);
-        bool canMoveRight = grid.isEmptyCell(x+1, y+1);
+        bool canMoveLeft = canMoveSolid(grid, x, y, MoveDirection::DownLeft);
+        bool canMoveRight = canMoveSolid(grid, x, y, MoveDirection::DownRight);
 
         if (canMoveLeft && canMoveRight) {
             bool moveLeft = randomDirection(rng) == 0;
 
             if (moveLeft) {
-                moveCell(grid, x, y, MoveDirection::DownLeft);
+                moveSolid(grid, x, y, MoveDirection::DownLeft);
             }
             else {
-                moveCell(grid, x, y, MoveDirection::DownRight);
+                moveSolid(grid, x, y, MoveDirection::DownRight);
             }
             return;
         }
 
         if (canMoveRight) {
-            moveCell(grid, x, y, MoveDirection::DownRight);
+            moveSolid(grid, x, y, MoveDirection::DownRight);
             return;
         }
 
         if (canMoveLeft) {
-            moveCell(grid, x, y, MoveDirection::DownLeft);
+            moveSolid(grid, x, y, MoveDirection::DownLeft);
             return;
         }
     }
 
-    void Simulation::updateLiquid(Grid& grid, int x, int y) {
-        Cell& cell = grid.getCell(x, y);
-
-        if (moveCell(grid, x, y, MoveDirection::Down)) {
+    void Simulation::updateLiquid(Grid& grid, int x, int y, Material material) {
+        float amount = grid.getLiquidAmount(x, y, material);
+        transferLiquid(grid, x, y, MoveDirection::Down, material, amount);
+        
+        amount = grid.getLiquidAmount(x, y, material);
+        if (amount <= 0.0f) {
             return;
         }
 
-        bool canMoveDownLeft = grid.isEmptyCell(x-1, y+1) || canFlowTowardsLowerLevel(grid, x, y, MoveDirection::Left);
-        bool canMoveDownRight = grid.isEmptyCell(x+1, y+1) || canFlowTowardsLowerLevel(grid, x, y, MoveDirection::Right);
+        displaceLiquid(grid, x, y, MoveDirection::Down, material, amount);
 
-        if (canMoveDownLeft && canMoveDownRight) {
-            bool moveLeft = randomDirection(rng) == 0;
+        amount = grid.getLiquidAmount(x, y, material);
+        if (amount <= 0.0f) {
+            return;
+        }
 
-            if (moveLeft) {
-                moveCell(grid, x, y, MoveDirection::DownLeft);
+        bool leftFirst = randomDirection(rng) == 0;
+        MoveDirection firstDirection = leftFirst ? MoveDirection::DownLeft : MoveDirection::DownRight;
+        MoveDirection secondDirection = leftFirst ? MoveDirection::DownRight : MoveDirection::DownLeft;
+
+        transferLiquid(grid, x, y, firstDirection, material, amount / 2.0f);
+
+        amount = grid.getLiquidAmount(x, y, material);
+        if (amount <= 0.0f) {
+            return;
+        }
+        displaceLiquid(grid, x, y, firstDirection, material, amount);
+        
+        amount = grid.getLiquidAmount(x, y, material);
+        transferLiquid(grid, x, y, secondDirection, material, amount);
+
+        amount = grid.getLiquidAmount(x, y, material);
+
+        if (amount > 0.0f) {
+            transferLiquid(grid, x, y, firstDirection, material, amount);
+        }
+
+        amount = grid.getLiquidAmount(x, y, material);
+        if (amount <= 0.0f) {
+            return;
+        }
+        displaceLiquid(grid, x, y, firstDirection, material, amount);
+
+        bool balanceLeftFirst = randomDirection(rng) == 0;
+        MoveDirection firstHorizontal = balanceLeftFirst ? MoveDirection::Left : MoveDirection::Right;
+        MoveDirection secondHorizontal = balanceLeftFirst ? MoveDirection::Right : MoveDirection::Left;
+
+        spreadLiquid(grid, x, y, firstHorizontal, material);
+        spreadLiquid(grid, x, y, secondHorizontal, material);
+    }
+
+    bool Simulation::moveSolid(Grid &grid, int x, int y, MoveDirection direction)
+    {
+        if (!canMoveSolid(grid, x, y, direction)) {
+            return false;
+        }
+
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+        
+        Cell& source = grid.getCell(x, y);
+        Cell& target = grid.getCell(targetX, targetY);
+
+        if (!target.liquids.empty()) {
+            displaceLiquidSideways(grid, targetX, targetY);
+        }
+
+        source.lastUpdatedFrame = currentFrame;
+        std::swap(source, target);
+        return true;
+    }
+
+    float Simulation::transferLiquid(Grid & grid, int x, int y, MoveDirection direction, Material material, float amount) {
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+
+        if (!grid.isValidCell(x, y) || !grid.isValidCell(targetX, targetY)) {
+            return 0.0f;
+        }
+
+        if(grid.getCell(x, y).solid != Material::Empty) {
+            return 0.0f;
+        }
+
+        if (amount <= 0.0f) {
+            return 0.0f;
+        }
+
+        float availableSource = grid.getLiquidAmount(x, y, material);
+        float availableCapacity = 1.0f - grid.getTotalLiquidAmount(targetX, targetY);
+        float transferableAmount = std::min({amount, availableCapacity, availableSource});
+
+        float addedAmount = grid.addLiquid(targetX, targetY, material, transferableAmount);
+        grid.removeLiquid(x, y, material, addedAmount);
+
+        return addedAmount;
+    }
+
+    float Simulation::balanceLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material) {
+        if (direction != MoveDirection::Left && direction != MoveDirection::Right) {
+            return 0.0f;
+        }
+
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+
+        if (!grid.isValidCell(x, y) || !grid.isValidCell(targetX, targetY)) {
+            return 0.0f;
+        }
+
+        if (grid.getCell(targetX, targetY).solid != Material::Empty) {
+            return 0.0f;
+        }
+
+        float sourceAmount = grid.getLiquidAmount(x, y, material);
+        float targetAmount = grid.getLiquidAmount(targetX, targetY, material);
+        float diff = sourceAmount - targetAmount;
+
+        if (diff <= 0.001f) {
+            return 0.0f;
+        }
+
+        float flowAmount = diff / 2.0f;
+        float transferred = transferLiquid(grid, x, y, direction, material, flowAmount);
+        float remaining = flowAmount - transferred;
+        
+        float displaced = 0.0f;
+
+        if (remaining > 0.001f) {
+            displaced = displaceLiquid(grid, x, y, direction, material, remaining);
+        }
+
+        return transferred + displaced;
+    }
+
+    void Simulation::spreadLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material)
+    {
+        if (direction != MoveDirection::Left &&
+            direction != MoveDirection::Right) {
+            return;
+        }
+
+        int step = direction == MoveDirection::Left ? -1 : 1;
+        for (int i = 0; i < horizontalFlowDistance; ++i) {
+            int currentX = x + i * step;
+
+            if (!grid.isValidCell(currentX, y)) {
+                break;
             }
-            else {
-                moveCell(grid, x, y, MoveDirection::DownRight);
+
+            if (grid.getCell(currentX, y).solid != Material::Empty) {
+                break;
             }
-            return;
-        }
 
-        if (canMoveDownRight) {
-            moveCell(grid, x, y, MoveDirection::DownRight);
-            return;
-        }
+            float transferred = balanceLiquid(grid, currentX, y, direction, material);
 
-        if (canMoveDownLeft) {
-            moveCell(grid, x, y, MoveDirection::DownLeft);
-            return;
-        }
-
-        bool canMoveRight = grid.isEmptyCell(x+1, y);
-        bool canMoveLeft = grid.isEmptyCell(x-1, y);
-
-        if (canMoveRight && canMoveLeft) {
-            bool moveLeft = randomDirection(rng) == 0;
-
-            if (moveLeft) {
-                moveCell(grid, x, y, MoveDirection::Left);
+            if (transferred <= 0.0f) {
+                break;
             }
-            else {
-                moveCell(grid, x, y, MoveDirection::Right);
-            }
-            return;
-        }
-
-        if (canMoveRight) {
-            moveCell(grid, x, y, MoveDirection::Right);
-            return;
-        }
-
-        if (canMoveLeft) {
-            moveCell(grid, x, y, MoveDirection::Left);
-            return;
         }
     }
 
-    bool Simulation::canFlowTowardsLowerLevel(const Grid& grid, int x, int y, MoveDirection direction) {
-        int step = direction == MoveDirection::Right ? 1 : -1;
+    float Simulation::displaceLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material, float amount) {
+        if (amount <= 0.0f) {
+            return 0.0f;
+        }
 
-        for (int dist = 1; dist <= maxFlowDistance; dist++) {
-            int checkX = x + dist * step;
-            if (!grid.isEmptyCell(checkX, y)) {
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+
+        if (!grid.isValidCell(x, y) ||
+            !grid.isValidCell(targetX, targetY)) {
+            return 0.0f;
+        }
+
+        Cell& source = grid.getCell(x, y);
+        Cell& target = grid.getCell(targetX, targetY);
+
+        if (source.solid != Material::Empty || target.solid != Material::Empty) {
+            return 0.0f;
+        }
+
+        float sourceDensity = getMaterialProperties(material).density;
+        Material displacedMaterial = Material::Empty;
+        float lowestDensity = sourceDensity;
+
+        for (const LiquidLayer& layer : target.liquids) {
+            float density = getMaterialProperties(layer.material).density;
+
+            if (density < lowestDensity) {
+                lowestDensity = density;
+                displacedMaterial = layer.material;
+            }
+        }
+
+        if (displacedMaterial == Material::Empty) {
+            return 0.0f;
+        }
+
+        float sourceAmount = grid.getLiquidAmount(x, y, material);
+        float targetAmount = grid.getLiquidAmount(targetX, targetY, displacedMaterial);
+
+        float exchangeAmount = std::min({amount, sourceAmount, targetAmount});
+
+        if (exchangeAmount <= 0.0f) {
+            return 0.0f;
+        }
+        
+        grid.removeLiquid(x, y, material, exchangeAmount);
+        grid.removeLiquid(targetX, targetY, displacedMaterial, exchangeAmount);
+
+        grid.addLiquid(x, y, displacedMaterial, exchangeAmount);
+        grid.addLiquid(targetX, targetY, material, exchangeAmount);
+
+        return exchangeAmount;
+    }
+
+    void Simulation::displaceLiquidSideways(Grid& grid, int x, int y) {
+        if (!grid.isValidCell(x, y)) {
+            return;
+        }
+
+        std::vector<Material> materials;
+
+        for (const LiquidLayer& layer : grid.getCell(x, y).liquids) {
+            materials.push_back(layer.material);
+        }
+
+        bool leftFirst = randomDirection(rng) == 0;
+        MoveDirection firstDirection = leftFirst ? MoveDirection::Left : MoveDirection::Right;
+        MoveDirection secondDirection = leftFirst ? MoveDirection::Right : MoveDirection::Left;
+
+        for (Material material : materials) {
+            float amount = grid.getLiquidAmount(x, y, material);
+
+            if (amount <= 0.0f) {
+                continue;
+            }
+
+            transferLiquid(grid, x, y, firstDirection, material, amount / 2.0f);
+            amount = grid.getLiquidAmount(x, y, material);
+
+            transferLiquid(grid, x, y, secondDirection, material,amount);
+
+            amount = grid.getLiquidAmount(x, y, material);
+
+            if (amount > 0.0f) {
+                transferLiquid(grid, x, y, firstDirection, material, amount);
+            }
+        }
+    }
+
+    bool Simulation::canMoveSolid(Grid& grid, int x, int y, MoveDirection direction) const {
+        if (!grid.isValidCell(x, y)) {
+            return false;
+        }
+
+        Cell& source = grid.getCell(x, y);
+
+        if (source.solid == Material::Empty) {
+            return false;
+        }
+        
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+
+        if (!grid.isValidCell(targetX, targetY)) {
+            return false;
+        }
+
+        Cell& target = grid.getCell(targetX, targetY);
+
+        if (target.solid != Material::Empty) {
+            return false;
+        }
+
+        if (target.liquids.empty()) {
+            return true;
+        }
+
+        float solidDensity = getMaterialProperties(source.solid).density;
+        for (const LiquidLayer& layer : target.liquids) {
+            float liquidDensity = getMaterialProperties(layer.material).density;
+            if (solidDensity <= liquidDensity) {
                 return false;
             }
-
-            if (grid.isEmptyCell(checkX, y+1)) {
-                return true;
-            }
         }
 
-        return false;
+        return true;
     }
 
-    bool Simulation::moveCell(Grid& grid, int x, int y, MoveDirection direction) {
+    std::pair<int, int> Simulation::getTargetPosition(int x, int y, MoveDirection direction) const {
         int targetX = x, targetY = y;
 
         switch (direction)
@@ -176,16 +397,7 @@ namespace sandbox
                 targetY--;
                 break;
         }
-        
-        if(!grid.isEmptyCell(targetX, targetY)) {
-            return false;
-        }
 
-        grid.getCell(x, y).lastUpdatedFrame = currentFrame;
-        std::swap(
-            grid.getCell(x, y), 
-            grid.getCell(targetX, targetY)
-        );
-        return true;
+        return {targetX, targetY};
     }
 } // namespace sandbox

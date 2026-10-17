@@ -2,6 +2,7 @@
 
 #include "Grid.hpp"
 #include "Material.hpp"
+#include "MaterialProperties.hpp"
 
 namespace sandbox {
     class Brush {

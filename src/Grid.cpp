@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <stdexcept>
 #include "sandbox_lab/Grid.hpp"
+#include "sandbox_lab/MaterialProperties.hpp"
 
 namespace sandbox
 {
@@ -41,20 +43,123 @@ namespace sandbox
         if (!isValidCell(x, y)) {
             return false;
         }
-        
-        return getCell(x, y).material == Material::Empty;
+
+        const Cell& cell = getCell(x, y);
+        return cell.solid == Material::Empty && cell.liquids.empty();
     }
 
-    bool Grid::setCell(int x, int y, Material material) {
+    bool Grid::placeSolid(int x, int y, Material material) {
         if (!isValidCell(x, y) || !isEmptyCell(x, y)) {
             return false;
         }
 
-        if (material == Material::Empty) {
+        if (material == Material::Empty || getMaterialProperties(material).behaviour == Behaviour::Liquid) {
             return false;
         }
 
-        getCell(x, y).material = material;
+        getCell(x, y).solid = material;
         return true;
     }
+
+    LiquidLayer* Grid::getLiquidLayer(int x, int y, Material material) {
+        for (LiquidLayer& layer : getCell(x, y).liquids) {
+            if (layer.material == material) {
+                return &layer;
+            }
+        }
+        return nullptr;
+    }
+
+    float Grid::getTotalLiquidAmount(int x, int y) const
+    {
+        if(!isValidCell(x, y)) {
+            return 0.0f;
+        }
+        
+        float amount = 0.0f;
+        for (const LiquidLayer& layer : getCell(x, y).liquids) {
+            amount += layer.amount;
+        }
+
+        return amount;
+    }
+
+    float Grid::getLiquidAmount(int x, int y, Material material) const {
+        if(!isValidCell(x, y)) {
+            return 0.0f;
+        }
+
+        for (const LiquidLayer& layer : getCell(x, y).liquids) {
+            if (layer.material == material) {
+                return layer.amount;
+            }
+        }
+
+        return 0.0f;
+    }
+
+
+    float Grid::addLiquid(int x, int y, Material material, float amount)
+    {
+        if (!isValidCell(x, y)) {
+            return 0.0f;
+        }
+
+        if (getCell(x, y).solid != Material::Empty || getMaterialProperties(material).behaviour != Behaviour::Liquid) {
+            return 0.0f;
+        }
+        
+        if(amount <= 0) {
+            return 0.0f;
+        }
+        
+        LiquidLayer* layer = getLiquidLayer(x, y, material);
+        float availableCapacity = 1.0f - getTotalLiquidAmount(x, y);
+        float addedAmount = std::min(amount, availableCapacity);
+        
+        if(addedAmount <= 0.0f) {
+            return 0.0f;
+        }
+
+        if (layer != nullptr) {
+            layer->amount += addedAmount;
+            return addedAmount;
+        }
+
+        getCell(x, y).liquids.push_back({material, addedAmount});
+        return addedAmount;
+    }
+
+    float Grid::removeLiquid(int x, int y, Material material, float amount)
+    {
+        if (!isValidCell(x, y)) {
+            return 0.0f;
+        }
+
+        if (getCell(x, y).solid != Material::Empty || getMaterialProperties(material).behaviour != Behaviour::Liquid) {
+            return 0.0f;
+        }
+        
+        if(amount <= 0) {
+            return 0.0f;
+        }
+        
+        auto& liquids = getCell(x, y).liquids;
+            for (auto it = liquids.begin(); it != liquids.end(); ++it) {
+                if (it->material == material) {
+                    float availableLiquid = it->amount;
+                    float removedAmount = std::min(availableLiquid, amount);
+
+                    it->amount -= removedAmount;
+
+                    if (it->amount <= 0) {
+                        liquids.erase(it);
+                    }
+
+                    return removedAmount;
+                }
+            }  
+        return 0.0f;
+    }
+
 }

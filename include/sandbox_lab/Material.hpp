@@ -5,5 +5,7 @@ namespace sandbox {
         Empty,
         Sand,
         Water,
+        Oil,
+        
     };
 }

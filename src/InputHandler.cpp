@@ -32,6 +32,9 @@ namespace sandbox
         if (IsKeyPressed(KEY_TWO)) {
             brush.setMaterial(Material::Water);
         }
+        if (IsKeyPressed(KEY_THREE)) {
+            brush.setMaterial(Material::Oil);
+        }
     }
 
     void InputHandler::handleBrushSizeChange(Brush& brush) {

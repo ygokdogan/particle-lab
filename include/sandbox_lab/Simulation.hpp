@@ -16,13 +16,19 @@ namespace sandbox {
             
             std::uint64_t currentFrame;
             bool scanLeftToRight = true;
-
-            const int maxFlowDistance = 12;
-
-            bool moveCell(Grid& grid, int x, int y, MoveDirection direction);
-            bool canFlowTowardsLowerLevel(const Grid& grid, int x, int y, MoveDirection direction);
+            
+            std::pair<int, int> getTargetPosition(int x, int y, MoveDirection direction) const;
+            bool canMoveSolid(Grid& grid, int x, int y, MoveDirection direction) const;
+            bool moveSolid(Grid& grid, int x, int y, MoveDirection direction);
+            
+            static constexpr int horizontalFlowDistance = 3;
+            float transferLiquid(Grid& grid, int x, int y, MoveDirection direction, Material material, float amount);
+            float balanceLiquid(Grid& grid, int x, int y, MoveDirection direction, Material material);
+            void spreadLiquid(Grid& grid, int x, int y, MoveDirection direction, Material material);
+            float displaceLiquid(Grid& grid, int x, int y, MoveDirection direction, Material material, float amount);
+            void displaceLiquidSideways(Grid& grid, int x, int y);
             
             void updatePowder(Grid& grid, int x, int y);
-            void updateLiquid(Grid&, int x, int y);
+            void updateLiquid(Grid&, int x, int y, Material material);
     };
 }
