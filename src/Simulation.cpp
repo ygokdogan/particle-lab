@@ -275,10 +275,29 @@ namespace sandbox
         float sourceAmount = grid.getLiquidAmount(x, y, material);
         float targetAmount = grid.getLiquidAmount(targetX, targetY, displacedMaterial);
 
+        float totalMoved = 0.0f;
+        float remainingAmount = std::min(amount, sourceAmount);
+
+        if (direction == MoveDirection::Down || direction == MoveDirection::DownLeft || direction == MoveDirection::DownRight) {
+            bool leftFirst = randomDirection(rng) == 0;
+            MoveDirection firstDirection = leftFirst ? MoveDirection::Left : MoveDirection::Right;
+            MoveDirection secondDirection = leftFirst ? MoveDirection::Right : MoveDirection::Left;
+            float requested = std::min(remainingAmount, targetAmount);
+            float movedAside = transferLiquid(grid, targetX, targetY, firstDirection, displacedMaterial, requested / 2.0f);
+            movedAside += transferLiquid(grid, targetX, targetY, secondDirection, displacedMaterial, requested - movedAside);
+            movedAside += transferLiquid(grid, targetX, targetY, firstDirection, displacedMaterial, requested - movedAside);
+            float movedDown = transferLiquid(grid, x, y, direction, material, movedAside);
+            remainingAmount -= movedDown;
+            totalMoved += movedDown;
+        }
+
+        sourceAmount = grid.getLiquidAmount(x, y, material);
+        targetAmount = grid.getLiquidAmount(targetX, targetY, displacedMaterial);
+
         float exchangeAmount = std::min({amount, sourceAmount, targetAmount});
 
         if (exchangeAmount <= 0.0f) {
-            return 0.0f;
+            return totalMoved;
         }
         
         grid.removeLiquid(x, y, material, exchangeAmount);
@@ -287,7 +306,7 @@ namespace sandbox
         grid.addLiquid(x, y, displacedMaterial, exchangeAmount);
         grid.addLiquid(targetX, targetY, material, exchangeAmount);
 
-        return exchangeAmount;
+        return totalMoved + exchangeAmount;
     }
 
     void Simulation::displaceLiquidSideways(Grid& grid, int x, int y) {

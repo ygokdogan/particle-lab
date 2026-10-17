@@ -10,5 +10,8 @@ namespace sandbox {
 
         private:
             int cellSize;
+            
+            void renderSolidCell(const Cell& cell, int x, int y) const;
+            void renderLiquidCell(const Cell& cell, int x, int y) const;
     };
 }
