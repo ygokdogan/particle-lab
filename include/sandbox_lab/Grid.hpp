@@ -16,6 +16,8 @@ namespace sandbox
 
             bool isValidCell(int x, int y) const;
             bool isEmptyCell(int x, int y) const;
+            
+            bool setCell(int x, int y, Material material);
 
         private:
             int width;

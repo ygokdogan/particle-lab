@@ -44,4 +44,17 @@ namespace sandbox
         
         return getCell(x, y).material == Material::Empty;
     }
+
+    bool Grid::setCell(int x, int y, Material material) {
+        if (!isValidCell(x, y) || !isEmptyCell(x, y)) {
+            return false;
+        }
+
+        if (material == Material::Empty) {
+            return false;
+        }
+
+        getCell(x, y).material = material;
+        return true;
+    }
 }

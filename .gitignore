@@ -1,6 +1,7 @@
 # Compiled files
 /main
 *.o
+*.dSYM/
 /build/
 
 # macOS
