@@ -35,6 +35,15 @@ namespace sandbox
         return height;
     }
 
+    bool Grid::eraseCell(int x, int y) {
+        if (!isValidCell(x, y)) {
+            return false;
+        }
+
+        getCell(x, y) = Cell{};
+        return true;
+    }
+
     bool Grid::isValidCell(int x, int y) const {
         return (x >= 0 && x < width && y >= 0 && y < height);
     }
@@ -53,7 +62,12 @@ namespace sandbox
             return false;
         }
 
-        if (material == Material::Empty || getMaterialProperties(material).behaviour == Behaviour::Liquid) {
+        if (material == Material::Empty) {
+            return false;
+        }
+        
+        Behaviour behaviour = getMaterialProperties(material).behaviour;
+        if (behaviour != Behaviour::Powder && behaviour != Behaviour::Static) {
             return false;
         }
 
@@ -161,5 +175,4 @@ namespace sandbox
             }  
         return 0.0f;
     }
-
 }

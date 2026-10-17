@@ -7,6 +7,11 @@ namespace sandbox {
             {0, 0, 0},
             0.0f
         };
+        static const MaterialProperties stoneProperties {
+            Behaviour::Static,
+            {110, 115, 125},
+            2500.0f
+        };
         static const MaterialProperties sandProperties {
             Behaviour::Powder,
             {230, 200, 90},
@@ -26,6 +31,8 @@ namespace sandbox {
         switch (material) {
             case Material::Empty:
                 return emptyProperties;
+            case Material::Stone:
+                return stoneProperties;
             case Material::Sand:
                 return sandProperties;
             case Material::Water:

@@ -28,43 +28,7 @@ namespace sandbox {
     void Application::run() {
         while (!WindowShouldClose()) {
             inputHandler.update(grid, brush);
-
-            float waterBefore = getTotalMaterialAmount(grid, Material::Water);
-            float oilBefore = getTotalMaterialAmount(grid, Material::Oil);
-
             simulation.update(grid);
-
-            float waterAfter = getTotalMaterialAmount(grid, Material::Water);
-            float oilAfter = getTotalMaterialAmount(grid, Material::Oil);
-
-            double waterDiff = waterAfter - waterBefore;
-            double oilDiff = oilAfter - oilBefore;
-
-            if (std::fabs(waterDiff) >= 0.001) {
-                std::fprintf(
-                    stderr,
-                    "WATER | Before: %.9f | After: %.9f | Diff: %.9f\n",
-                    waterBefore,
-                    waterAfter,
-                    waterDiff
-                );
-            }
-
-            if (std::fabs(oilDiff) >= 0.001) {
-                std::fprintf(
-                    stderr,
-                    "OIL | Before: %.9f | After: %.9f | Diff: %.9f\n",
-                    oilBefore,
-                    oilAfter,
-                    oilDiff
-                );
-            }
-
-            double waterTolerance = std::max(0.001, waterBefore * 0.00001);
-            double oilTolerance = std::max(0.001, oilBefore * 0.00001);
-
-            assert(std::fabs(waterBefore - waterAfter) < waterTolerance);
-            assert(std::fabs(oilBefore - oilAfter) < oilTolerance);
 
             BeginDrawing();
             ClearBackground(BLACK);

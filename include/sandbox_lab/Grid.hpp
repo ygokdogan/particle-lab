@@ -9,11 +9,13 @@ namespace sandbox
         public: 
             Grid(int width, int height);
 
-            Cell& getCell(int x, int y);
-            const Cell& getCell(int x, int y) const;
             int getWidth() const;
             int getHeight() const;
 
+            Cell& getCell(int x, int y);
+            const Cell& getCell(int x, int y) const;
+            
+            bool eraseCell(int x, int y);
             bool isValidCell(int x, int y) const;
             bool isEmptyCell(int x, int y) const;
             

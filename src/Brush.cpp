@@ -8,20 +8,26 @@ namespace sandbox
         setMaterial(material);
     }
 
-    void Brush::paint(Grid& grid, int x, int y) {
-        if(!grid.isValidCell(x, y)){
-            return;
-        }
-
+    void Brush::paint(Grid& grid, int x, int y) const {
         Behaviour behaviour = getMaterialProperties(selectedMaterial).behaviour;
-        
-        for(int i = y-(size/2); i <= y+(size/2); i++) {
-            for (int j = x-(size/2); j <= x+(size/2); j++) {
+
+        int radius = size/2;
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
                 if(behaviour == Behaviour::Liquid) {
-                    grid.addLiquid(j, i, selectedMaterial, 1.0f);
+                    grid.addLiquid(x + dx, y + dy, selectedMaterial, 1.0f);
                 } else {
-                    grid.placeSolid(j, i, selectedMaterial);
+                    grid.placeSolid(x + dx, y + dy, selectedMaterial);
                 }
+            }
+        }
+    }
+
+    void Brush::erase(Grid& grid, int x, int y) const {
+        int radius = size/2;
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                grid.eraseCell(x + dx, y + dy);
             }
         }
     }
