@@ -5,6 +5,7 @@
 #include "InputHandler.hpp"
 #include "Renderer.hpp"
 #include "Simulation.hpp"
+#include "UIRenderer.hpp"
 
 namespace sandbox {
     class Application {
@@ -19,7 +20,10 @@ namespace sandbox {
             Renderer renderer;
             Brush brush;
             InputHandler inputHandler;
+            UIRenderer uiRenderer;
 
-            float getTotalMaterialAmount(const Grid& grid, Material material);
+            bool paused = false;
+            float simulationSpeed = 1.0f;
+            float simulationAccumulator = 0.0f;
     };
 }

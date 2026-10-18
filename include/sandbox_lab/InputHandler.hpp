@@ -9,21 +9,29 @@
 
 namespace sandbox
 {
+    struct InputActions {
+        bool togglePause = false;
+        bool speedUp = false;
+        bool speedDown = false;
+    };
+
     class InputHandler {
         public:
             explicit InputHandler(int cellSize);
 
-            void update(Grid& grid, Brush& brush);
+            InputActions update(Grid& grid, Brush& brush);
 
+            std::optional<std::pair<int, int>> getHoveredCell() const;
         private: 
             int cellSize;
             std::optional<std::pair<int,int>> previousMouseCell;
+            std::optional<std::pair<int,int>> hoveredCell;
             bool previousErasing = false;
+
+            InputActions handleSimulationControls();
 
             void drawLine(Grid& grid, Brush& brush, int x0, int y0, int x1, int y1, bool erasing);
 
-            void handlePlace(Grid& grid, Brush& brush);
-            void handleErase(Grid& grid, Brush& brush);
             void handleMaterialSelection(Brush& brush);
             void handleBrushSizeChange(Brush& brush);
     };

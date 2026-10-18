@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Brush.hpp"
 #include "Grid.hpp"
 
 namespace sandbox {
@@ -7,6 +8,7 @@ namespace sandbox {
         public:
             explicit Renderer(int cellSize);
             void render(const Grid& grid);
+            void renderBrushPreview(const Brush& brush, int gridX, int gridY) const;
 
         private:
             int cellSize;

@@ -49,4 +49,33 @@ namespace sandbox {
         ::Color color{props.color.r, props.color.g, props.color.b, 255};
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
+
+    void Renderer::renderBrushPreview(const Brush &brush, int gridX, int gridY) const {
+        int brushSize = brush.getSize();
+        int radius = brushSize / 2;
+
+        int screenX = (gridX - radius) * cellSize;
+        int screenY = (gridY - radius) * cellSize;
+
+        int previewSize = brushSize * cellSize;
+
+        const MaterialProperties& props = getMaterialProperties(brush.getMaterial());
+
+        ::Color color{
+            props.color.r,
+            props.color.g,
+            props.color.b,
+            255
+        };
+
+        Rectangle bounds{
+            static_cast<float>(screenX),
+            static_cast<float>(screenY),
+            static_cast<float>(previewSize),
+            static_cast<float>(previewSize)
+        };
+
+        DrawRectangleRec(bounds, Fade(color, 0.18f));
+        DrawRectangleLinesEx(bounds, 1.0f, Fade(color, 0.8f));
+    }
 }

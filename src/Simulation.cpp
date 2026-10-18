@@ -51,8 +51,8 @@ namespace sandbox
             return;
         }
 
-        bool canMoveLeft = canMoveSolid(grid, x, y, MoveDirection::DownLeft);
-        bool canMoveRight = canMoveSolid(grid, x, y, MoveDirection::DownRight);
+        bool canMoveLeft = canMoveSolid(grid, x, y, MoveDirection::DownLeft) && canMoveSolid(grid, x, y, MoveDirection::Left);
+        bool canMoveRight = canMoveSolid(grid, x, y, MoveDirection::DownRight) && canMoveSolid(grid, x, y, MoveDirection::Right);
 
         if (canMoveLeft && canMoveRight) {
             bool moveLeft = randomDirection(rng) == 0;
@@ -79,49 +79,52 @@ namespace sandbox
 
     void Simulation::updateLiquid(Grid& grid, int x, int y, Material material) {
         float amount = grid.getLiquidAmount(x, y, material);
+
         transferLiquid(grid, x, y, MoveDirection::Down, material, amount);
-        
+
         amount = grid.getLiquidAmount(x, y, material);
-        if (amount <= 0.0f) {
-            return;
-        }
+        if (amount <= 0.0f) return;
 
         displaceLiquid(grid, x, y, MoveDirection::Down, material, amount);
 
         amount = grid.getLiquidAmount(x, y, material);
-        if (amount <= 0.0f) {
-            return;
-        }
+        if (amount <= 0.0f) return;
 
+        bool canFlowLeft = grid.isValidCell(x - 1, y) && grid.getCell(x - 1, y).solid == Material::Empty;
+        bool canFlowRight = grid.isValidCell(x + 1, y) && grid.getCell(x + 1, y).solid == Material::Empty;
         bool leftFirst = randomDirection(rng) == 0;
+
         MoveDirection firstDirection = leftFirst ? MoveDirection::DownLeft : MoveDirection::DownRight;
+
         MoveDirection secondDirection = leftFirst ? MoveDirection::DownRight : MoveDirection::DownLeft;
 
-        transferLiquid(grid, x, y, firstDirection, material, amount / 2.0f);
+        bool canFlowFirst = leftFirst ? canFlowLeft : canFlowRight;
+        bool canFlowSecond = leftFirst ? canFlowRight : canFlowLeft;
 
-        amount = grid.getLiquidAmount(x, y, material);
-        if (amount <= 0.0f) {
-            return;
+        if (canFlowFirst) {
+            transferLiquid(grid, x, y, firstDirection, material, amount / 2.0f);
+
+            amount = grid.getLiquidAmount(x, y, material);
+            displaceLiquid(grid, x, y, firstDirection, material, amount);
         }
-        displaceLiquid(grid, x, y, firstDirection, material, amount);
-        
-        amount = grid.getLiquidAmount(x, y, material);
-        transferLiquid(grid, x, y, secondDirection, material, amount);
 
-        amount = grid.getLiquidAmount(x, y, material);
+        if (canFlowSecond) {
+            amount = grid.getLiquidAmount(x, y, material);
+            transferLiquid(grid, x, y, secondDirection, material, amount);
 
-        if (amount > 0.0f) {
+            amount = grid.getLiquidAmount(x, y, material);
+            displaceLiquid(grid, x, y, secondDirection, material, amount);
+        }
+
+        if (canFlowFirst) {
+            amount = grid.getLiquidAmount(x, y, material);
             transferLiquid(grid, x, y, firstDirection, material, amount);
         }
 
-        amount = grid.getLiquidAmount(x, y, material);
-        if (amount <= 0.0f) {
-            return;
-        }
-        displaceLiquid(grid, x, y, firstDirection, material, amount);
-
         bool balanceLeftFirst = randomDirection(rng) == 0;
+
         MoveDirection firstHorizontal = balanceLeftFirst ? MoveDirection::Left : MoveDirection::Right;
+
         MoveDirection secondHorizontal = balanceLeftFirst ? MoveDirection::Right : MoveDirection::Left;
 
         spreadLiquid(grid, x, y, firstHorizontal, material);

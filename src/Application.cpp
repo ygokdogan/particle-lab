@@ -14,38 +14,56 @@ namespace sandbox {
         grid(windowWidth / cellSize, windowHeight / cellSize),
         simulation(),
         renderer(cellSize),
-        brush(5),
-        inputHandler(cellSize)
+        brush(3),
+        inputHandler(cellSize),
+        uiRenderer()
     {
         InitWindow(windowWidth, windowHeight, "Sandbox Lab");
+        uiRenderer.load();
         SetTargetFPS(60);
     }
 
     Application::~Application() {
+        uiRenderer.unload();
         CloseWindow();
     }
 
     void Application::run() {
         while (!WindowShouldClose()) {
-            inputHandler.update(grid, brush);
-            simulation.update(grid);
+            InputActions actions = inputHandler.update(grid, brush);
+
+            if (actions.togglePause) {
+                paused = !paused;
+            }
+
+            if (actions.speedUp) {
+                simulationSpeed = std::min(simulationSpeed * 2.0f, 4.0f);
+            }
+
+            if (actions.speedDown) {
+                simulationSpeed = std::max(simulationSpeed / 2.0f, 0.25f);
+            }
+
+            if (!paused) {
+                simulationAccumulator += simulationSpeed;
+
+                while (simulationAccumulator >= 1.0f) {
+                    simulation.update(grid);
+                    simulationAccumulator -= 1.0f;
+                }
+            }
 
             BeginDrawing();
             ClearBackground(BLACK);
             renderer.render(grid);
+            auto hoveredCell = inputHandler.getHoveredCell();
+            if(hoveredCell) {
+                auto [x, y] = *hoveredCell;
+                renderer.renderBrushPreview(brush, x, y);
+            }
+
+            uiRenderer.render(brush, simulationSpeed, paused);
             EndDrawing();
         }
-    }
-
-    float Application::getTotalMaterialAmount(const Grid& grid, Material material) {
-        double total = 0.0f;
-
-        for (int y = 0; y < grid.getHeight(); ++y) {
-            for (int x = 0; x < grid.getWidth(); ++x) {
-                total += grid.getLiquidAmount(x, y, material);
-            }
-        }
-
-        return total;
     }
 }

@@ -10,17 +10,23 @@ namespace sandbox
         
     }
 
-    void InputHandler::update(Grid& grid, Brush& brush) {
+    InputActions InputHandler::handleSimulationControls() {
+        InputActions actions;
+
+        actions.togglePause = IsKeyPressed(KEY_SPACE);
+        actions.speedUp = IsKeyPressed(KEY_UP);
+        actions.speedDown = IsKeyPressed(KEY_DOWN);
+
+        return actions;
+    }
+
+    InputActions InputHandler::update(Grid& grid, Brush& brush) {
+        InputActions actions = handleSimulationControls();
         handleBrushSizeChange(brush);
         handleMaterialSelection(brush);
         
         bool erasing = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
         bool painting = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-        
-        if(!erasing && !painting){
-            previousMouseCell.reset();
-            return;
-        }
 
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
@@ -31,7 +37,15 @@ namespace sandbox
         if (mouseX < 0 || mouseY < 0 ||
             !grid.isValidCell(gridX, gridY)) {
             previousMouseCell.reset();
-            return;
+            hoveredCell.reset();
+            return actions;
+        }
+
+        hoveredCell = std::make_pair(gridX, gridY);
+        
+        if(!erasing && !painting){
+            previousMouseCell.reset();
+            return actions;
         }
 
         if (!previousMouseCell ||
@@ -45,6 +59,8 @@ namespace sandbox
 
         previousMouseCell = {gridX, gridY};
         previousErasing = erasing;
+
+        return actions;
     }
 
     void InputHandler::drawLine(Grid& grid, Brush& brush, int x0, int y0, int x1, int y1, bool erasing) {
@@ -81,34 +97,12 @@ namespace sandbox
         }
     }
 
-    void InputHandler::handlePlace(Grid& grid, Brush& brush) {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            Vector2 mousePos = GetMousePosition();
-
-            int x = mousePos.x / cellSize;
-            int y = mousePos.y / cellSize;
-
-            brush.paint(grid, x, y);
-        }
-    }
-
-    void InputHandler::handleErase(Grid &grid, Brush &brush) {
-         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-            Vector2 mousePos = GetMousePosition();
-
-            int x = mousePos.x / cellSize;
-            int y = mousePos.y / cellSize;
-
-            brush.erase(grid, x, y);
-        }
-    }
-
     void InputHandler::handleMaterialSelection(Brush& brush) {
         if (IsKeyPressed(KEY_ONE)) {
-            brush.setMaterial(Material::Sand);
+            brush.setMaterial(Material::Stone);
         }
         if (IsKeyPressed(KEY_TWO)) {
-            brush.setMaterial(Material::Stone);
+            brush.setMaterial(Material::Sand);
         }
         if (IsKeyPressed(KEY_THREE)) {
             brush.setMaterial(Material::Water);
@@ -125,5 +119,17 @@ namespace sandbox
         if (IsKeyPressed(KEY_MINUS)) {
             brush.setSize(brush.getSize()-2);
         }
+
+        float wheel = GetMouseWheelMove();
+        if (wheel > 0.0f) {
+            brush.setSize(brush.getSize() + 2);
+        }
+        else if (wheel < 0.0f) {
+            brush.setSize(brush.getSize() - 2);
+        }
+    }
+
+    std::optional<std::pair<int,int>> InputHandler::getHoveredCell() const {
+        return hoveredCell;
     }
  } // namespace sandbox
