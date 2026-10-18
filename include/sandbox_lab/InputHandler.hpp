@@ -13,6 +13,7 @@ namespace sandbox
         bool togglePause = false;
         bool speedUp = false;
         bool speedDown = false;
+        bool stepSimulate = false;
     };
 
     class InputHandler {

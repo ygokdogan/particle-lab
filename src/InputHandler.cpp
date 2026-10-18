@@ -16,6 +16,7 @@ namespace sandbox
         actions.togglePause = IsKeyPressed(KEY_SPACE);
         actions.speedUp = IsKeyPressed(KEY_UP);
         actions.speedDown = IsKeyPressed(KEY_DOWN);
+        actions.stepSimulate = IsKeyPressed(KEY_N);
 
         return actions;
     }

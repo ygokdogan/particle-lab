@@ -5,8 +5,8 @@
 #include <cmath>
 
 namespace sandbox {
-    constexpr int windowWidth = 800;
-    constexpr int windowHeight = 600;
+    constexpr int windowWidth = 1280;
+    constexpr int windowHeight = 960;
     constexpr int cellSize = 8;
 
 
@@ -50,6 +50,11 @@ namespace sandbox {
                 while (simulationAccumulator >= 1.0f) {
                     simulation.update(grid);
                     simulationAccumulator -= 1.0f;
+                }
+            }
+            else {
+                if(actions.stepSimulate) {
+                    simulation.update(grid);
                 }
             }
 

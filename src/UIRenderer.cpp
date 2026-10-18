@@ -27,7 +27,7 @@ namespace sandbox
 
     void UIRenderer::render(const Brush &brush, float simulationSpeed, bool paused) const {
         constexpr int panelWidth = 250;
-        constexpr int panelHeight = 350;
+        constexpr int panelHeight = 410;
         constexpr int padding = 16;
 
         int panelX = GetScreenWidth() - panelWidth - 12;
@@ -59,7 +59,7 @@ namespace sandbox
             paused
         );
 
-        drawControls(contentX, panelY + 285);
+        drawControls(contentX, panelY + 315);
     }
 
     void UIRenderer::drawText(const char* text, int x, int y, float size, Color color) const {
@@ -92,12 +92,16 @@ namespace sandbox
 
     void UIRenderer::drawSimulationInfo(int x, int y, int brushSize, float simulationSpeed, bool paused) const {
         drawText("Brush Size:", x, y, 14, LIGHTGRAY);
-
         drawText(TextFormat("%d", brushSize), x + 175, y, 14, WHITE);
+        
         drawText("Sim Speed:", x, y + 27, 14, LIGHTGRAY);
         drawText(TextFormat("%.2fx", simulationSpeed), x + 160, y + 27, 14, WHITE);
+        
         drawText("Status:", x, y + 54, 14, LIGHTGRAY);
         drawText(paused ? "PAUSED" : "RUNNING", x + 145, y + 54, 14, paused ? ORANGE : GREEN);
+        
+        drawText("FPS:", x, y + 81, 14, LIGHTGRAY);
+        drawText(TextFormat("%d", GetFPS()), x + 175, y + 81, 14, WHITE);
     }
 
     void UIRenderer::drawControls(int x, int y) const {
@@ -111,5 +115,8 @@ namespace sandbox
 
         drawText("SCROLL / +/-", x, y + 40, 12, WHITE);
         drawText("Brush Size", x + 105, y + 40, 12, GRAY);
+
+        drawText("N", x, y + 60, 12, WHITE);
+        drawText("Simulate 1 Step", x + 90, y + 60, 12, GRAY);
     }
 } // namespace sandbox
