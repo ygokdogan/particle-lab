@@ -1,20 +1,18 @@
 #include "sandbox_lab/Brush.hpp"
 
-namespace sandbox
-{
-    Brush::Brush(int size, Material material) : size(size), selectedMaterial(material)
-    {
+namespace sandbox {
+    Brush::Brush(int size, Material material) : size(size), selectedMaterial(material) {
         setSize(size);
         setMaterial(material);
     }
 
-    void Brush::paint(Grid& grid, int x, int y) const {
+    void Brush::paint(Grid &grid, int x, int y) const {
         Behaviour behaviour = getMaterialProperties(selectedMaterial).behaviour;
 
-        int radius = size/2;
+        int radius = size / 2;
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
-                if(behaviour == Behaviour::Liquid) {
+                if (behaviour == Behaviour::Liquid) {
                     grid.addLiquid(x + dx, y + dy, selectedMaterial, 1.0f);
                 } else {
                     grid.placeSolid(x + dx, y + dy, selectedMaterial);
@@ -23,8 +21,8 @@ namespace sandbox
         }
     }
 
-    void Brush::erase(Grid& grid, int x, int y) const {
-        int radius = size/2;
+    void Brush::erase(Grid &grid, int x, int y) const {
+        int radius = size / 2;
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 grid.eraseCell(x + dx, y + dy);

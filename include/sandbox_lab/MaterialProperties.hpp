@@ -11,12 +11,12 @@ namespace sandbox {
         Gas,
         Static,
     };
-    
+
     struct MaterialProperties {
         Behaviour behaviour;
         RGB color;
         float density;
     };
 
-    const MaterialProperties& getMaterialProperties(Material material);
+    const MaterialProperties &getMaterialProperties(Material material);
 }

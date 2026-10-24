@@ -1,22 +1,15 @@
 #include "sandbox_lab/UIRenderer.hpp"
 #include "sandbox_lab/MaterialProperties.hpp"
 
-namespace sandbox
-{
+namespace sandbox {
     struct MaterialEntry {
         Material material;
-        const char* name;
+        const char *name;
         int key;
     };
 
-    const MaterialEntry materials[] = {
-        {Material::Stone, "Stone", 1},
-        {Material::Sand,  "Sand",  2},
-        {Material::Water, "Water", 3},
-        {Material::Oil,   "Oil",   4},
-        {Material::Wood,  "Wood",  5},
-        {Material::Lava,  "Lava",  6}
-    };
+    const MaterialEntry materials[] = {{Material::Stone, "Stone", 1}, {Material::Sand, "Sand", 2}, {Material::Water, "Water", 3},
+                                       {Material::Oil, "Oil", 4},     {Material::Wood, "Wood", 5}, {Material::Lava, "Lava", 6}};
 
     void UIRenderer::load() {
         font = LoadFontEx("assets/fonts/Inter-Medium.ttf", 18, nullptr, 0);
@@ -37,34 +30,18 @@ namespace sandbox
 
         int contentX = panelX + padding;
 
-        DrawRectangle(
-            panelX,
-            panelY,
-            panelWidth,
-            panelHeight,
-            Fade(BLACK, 0.85f)
-        );
+        DrawRectangle(panelX, panelY, panelWidth, panelHeight, Fade(BLACK, 0.85f));
 
         drawHeader(contentX, panelY + 16);
 
-        drawMaterials(
-            contentX,
-            panelY + 65,
-            brush.getMaterial()
-        );
+        drawMaterials(contentX, panelY + 65, brush.getMaterial());
 
-        drawSimulationInfo(
-            contentX,
-            panelY + 254,
-            brush.getSize(),
-            simulationSpeed,
-            paused
-        );
+        drawSimulationInfo(contentX, panelY + 254, brush.getSize(), simulationSpeed, paused);
 
         drawControls(contentX, panelY + 369);
     }
 
-    void UIRenderer::drawText(const char* text, int x, int y, float size, Color color) const {
+    void UIRenderer::drawText(const char *text, int x, int y, float size, Color color) const {
         DrawTextEx(font, text, Vector2{static_cast<float>(x), static_cast<float>(y)}, size, 0.5f, color);
     }
 
@@ -75,15 +52,15 @@ namespace sandbox
 
     void UIRenderer::drawMaterials(int x, int y, Material selectedMaterial) const {
         drawText("MATERIALS", x, y, 13, GRAY);
-        
+
         int rowY = y + 27;
-        for (const MaterialEntry& entry : materials) {
+        for (const MaterialEntry &entry : materials) {
             bool selected = entry.material == selectedMaterial;
 
             if (selected) {
-                DrawRectangle(x-5, rowY -4, 226, 26, Fade(WHITE, 0.12f));
+                DrawRectangle(x - 5, rowY - 4, 226, 26, Fade(WHITE, 0.12f));
             }
-            const auto& props = getMaterialProperties(entry.material);
+            const auto &props = getMaterialProperties(entry.material);
             Color materialColor{props.color.r, props.color.g, props.color.b, 255};
             DrawRectangle(x, rowY + 3, 12, 12, materialColor);
 
@@ -95,13 +72,13 @@ namespace sandbox
     void UIRenderer::drawSimulationInfo(int x, int y, int brushSize, float simulationSpeed, bool paused) const {
         drawText("Brush Size:", x, y, 14, LIGHTGRAY);
         drawText(TextFormat("%d", brushSize), x + 175, y, 14, WHITE);
-        
+
         drawText("Sim Speed:", x, y + 27, 14, LIGHTGRAY);
         drawText(TextFormat("%.2fx", simulationSpeed), x + 160, y + 27, 14, WHITE);
-        
+
         drawText("Status:", x, y + 54, 14, LIGHTGRAY);
         drawText(paused ? "PAUSED" : "RUNNING", x + 145, y + 54, 14, paused ? ORANGE : GREEN);
-        
+
         drawText("FPS:", x, y + 81, 14, LIGHTGRAY);
         drawText(TextFormat("%d", GetFPS()), x + 175, y + 81, 14, WHITE);
     }

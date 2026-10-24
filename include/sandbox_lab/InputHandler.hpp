@@ -7,8 +7,7 @@
 #include "Grid.hpp"
 #include "Material.hpp"
 
-namespace sandbox
-{
+namespace sandbox {
     struct InputActions {
         bool togglePause = false;
         bool speedUp = false;
@@ -17,23 +16,24 @@ namespace sandbox
     };
 
     class InputHandler {
-        public:
-            explicit InputHandler(int cellSize);
+    public:
+        explicit InputHandler(int cellSize);
 
-            InputActions update(Grid& grid, Brush& brush);
+        InputActions update(Grid &grid, Brush &brush);
 
-            std::optional<std::pair<int, int>> getHoveredCell() const;
-        private: 
-            int cellSize;
-            std::optional<std::pair<int,int>> previousMouseCell;
-            std::optional<std::pair<int,int>> hoveredCell;
-            bool previousErasing = false;
+        std::optional<std::pair<int, int>> getHoveredCell() const;
 
-            InputActions handleSimulationControls();
+    private:
+        int cellSize;
+        std::optional<std::pair<int, int>> previousMouseCell;
+        std::optional<std::pair<int, int>> hoveredCell;
+        bool previousErasing = false;
 
-            void drawLine(Grid& grid, Brush& brush, int x0, int y0, int x1, int y1, bool erasing);
+        InputActions handleSimulationControls();
 
-            void handleMaterialSelection(Brush& brush);
-            void handleBrushSizeChange(Brush& brush);
+        void drawLine(Grid &grid, Brush &brush, int x0, int y0, int x1, int y1, bool erasing);
+
+        void handleMaterialSelection(Brush &brush);
+        void handleBrushSizeChange(Brush &brush);
     };
 } // namespace sandbox

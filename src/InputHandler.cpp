@@ -3,12 +3,8 @@
 
 #include <cstdlib>
 
-namespace sandbox
-{
-    InputHandler::InputHandler(int cellSize) : cellSize(cellSize)
-    {
-        
-    }
+namespace sandbox {
+    InputHandler::InputHandler(int cellSize) : cellSize(cellSize) {}
 
     InputActions InputHandler::handleSimulationControls() {
         InputActions actions;
@@ -21,11 +17,11 @@ namespace sandbox
         return actions;
     }
 
-    InputActions InputHandler::update(Grid& grid, Brush& brush) {
+    InputActions InputHandler::update(Grid &grid, Brush &brush) {
         InputActions actions = handleSimulationControls();
         handleBrushSizeChange(brush);
         handleMaterialSelection(brush);
-        
+
         bool erasing = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
         bool painting = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 
@@ -35,22 +31,20 @@ namespace sandbox
         int gridX = mouseX / cellSize;
         int gridY = mouseY / cellSize;
 
-        if (mouseX < 0 || mouseY < 0 ||
-            !grid.isValidCell(gridX, gridY)) {
+        if (mouseX < 0 || mouseY < 0 || !grid.isValidCell(gridX, gridY)) {
             previousMouseCell.reset();
             hoveredCell.reset();
             return actions;
         }
 
         hoveredCell = std::make_pair(gridX, gridY);
-        
-        if(!erasing && !painting){
+
+        if (!erasing && !painting) {
             previousMouseCell.reset();
             return actions;
         }
 
-        if (!previousMouseCell ||
-            previousErasing != erasing) {
+        if (!previousMouseCell || previousErasing != erasing) {
             previousMouseCell = {gridX, gridY};
         }
 
@@ -64,9 +58,9 @@ namespace sandbox
         return actions;
     }
 
-    void InputHandler::drawLine(Grid& grid, Brush& brush, int x0, int y0, int x1, int y1, bool erasing) {
-        int dx = std::abs(x1-x0);
-        int dy = std::abs(y1-y0);
+    void InputHandler::drawLine(Grid &grid, Brush &brush, int x0, int y0, int x1, int y1, bool erasing) {
+        int dx = std::abs(x1 - x0);
+        int dy = std::abs(y1 - y0);
 
         int stepX = x0 < x1 ? 1 : -1;
         int stepY = y0 < y1 ? 1 : -1;
@@ -76,8 +70,7 @@ namespace sandbox
         while (true) {
             if (erasing) {
                 brush.erase(grid, x0, y0);
-            }
-            else {
+            } else {
                 brush.paint(grid, x0, y0);
             }
 
@@ -86,7 +79,7 @@ namespace sandbox
             }
 
             int doubleError = 2 * error;
-            if(doubleError > -dy) {
+            if (doubleError > -dy) {
                 error -= dy;
                 x0 += stepX;
             }
@@ -98,7 +91,7 @@ namespace sandbox
         }
     }
 
-    void InputHandler::handleMaterialSelection(Brush& brush) {
+    void InputHandler::handleMaterialSelection(Brush &brush) {
         if (IsKeyPressed(KEY_ONE)) {
             brush.setMaterial(Material::Stone);
         }
@@ -119,24 +112,23 @@ namespace sandbox
         }
     }
 
-    void InputHandler::handleBrushSizeChange(Brush& brush) {
+    void InputHandler::handleBrushSizeChange(Brush &brush) {
         if (IsKeyPressed(KEY_EQUAL)) {
-            brush.setSize(brush.getSize()+2);
+            brush.setSize(brush.getSize() + 2);
         }
         if (IsKeyPressed(KEY_MINUS)) {
-            brush.setSize(brush.getSize()-2);
+            brush.setSize(brush.getSize() - 2);
         }
 
         float wheel = GetMouseWheelMove();
         if (wheel > 0.0f) {
             brush.setSize(brush.getSize() + 2);
-        }
-        else if (wheel < 0.0f) {
+        } else if (wheel < 0.0f) {
             brush.setSize(brush.getSize() - 2);
         }
     }
 
-    std::optional<std::pair<int,int>> InputHandler::getHoveredCell() const {
+    std::optional<std::pair<int, int>> InputHandler::getHoveredCell() const {
         return hoveredCell;
     }
- } // namespace sandbox
+} // namespace sandbox

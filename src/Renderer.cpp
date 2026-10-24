@@ -3,36 +3,32 @@
 #include "sandbox_lab/MaterialProperties.hpp"
 #include "sandbox_lab/Renderer.hpp"
 
-
 namespace sandbox {
 
-    Renderer::Renderer(int cellSize) : cellSize(cellSize) {
-    }
-    
-    void Renderer::render(const Grid& grid) {
+    Renderer::Renderer(int cellSize) : cellSize(cellSize) {}
+
+    void Renderer::render(const Grid &grid) {
         for (int y = 0; y < grid.getHeight(); ++y) {
             for (int x = 0; x < grid.getWidth(); ++x) {
-                const Cell& currentCell = grid.getCell(x,y);
+                const Cell &currentCell = grid.getCell(x, y);
 
                 if (currentCell.solid != Material::Empty) {
                     renderSolidCell(currentCell, x, y);
-                }
-                else if (!currentCell.liquids.empty()) {
+                } else if (!currentCell.liquids.empty()) {
                     renderLiquidCell(currentCell, x, y);
                 }
 
-                if (currentCell.gas != Material::Empty &&
-                    currentCell.solid == Material::Empty) {
+                if (currentCell.gas != Material::Empty && currentCell.solid == Material::Empty) {
                     renderGasCell(currentCell, x, y);
                 }
             }
         }
     }
 
-    void Renderer::renderSolidCell(const Cell& cell, int x, int y) const {
-        const MaterialProperties& props = getMaterialProperties(cell.solid);
+    void Renderer::renderSolidCell(const Cell &cell, int x, int y) const {
+        const MaterialProperties &props = getMaterialProperties(cell.solid);
 
-        ::Color color {props.color.r, props.color.g, props.color.b, 255};
+        ::Color color{props.color.r, props.color.g, props.color.b, 255};
 
         if (cell.solid == Material::Wood && cell.burnTicks > 0) {
             float progress = static_cast<float>(cell.burnTicks) / cell.burnDuration;
@@ -47,21 +43,21 @@ namespace sandbox {
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
 
-    void Renderer::renderLiquidCell(const Cell& cell, int x, int y) const {
+    void Renderer::renderLiquidCell(const Cell &cell, int x, int y) const {
         constexpr float renderThreshold = 0.25f;
 
-        const LiquidLayer* dominantLayer = nullptr;
-        for (const LiquidLayer& layer : cell.liquids) {
+        const LiquidLayer *dominantLayer = nullptr;
+        for (const LiquidLayer &layer : cell.liquids) {
             if (dominantLayer == nullptr || layer.amount > dominantLayer->amount) {
                 dominantLayer = &layer;
             }
         }
 
-        if(dominantLayer == nullptr || dominantLayer->amount < renderThreshold) {
+        if (dominantLayer == nullptr || dominantLayer->amount < renderThreshold) {
             return;
         }
 
-        const MaterialProperties& props = getMaterialProperties(dominantLayer->material);
+        const MaterialProperties &props = getMaterialProperties(dominantLayer->material);
         ::Color color{props.color.r, props.color.g, props.color.b, 255};
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
@@ -75,28 +71,18 @@ namespace sandbox {
 
         int previewSize = brushSize * cellSize;
 
-        const MaterialProperties& props = getMaterialProperties(brush.getMaterial());
+        const MaterialProperties &props = getMaterialProperties(brush.getMaterial());
 
-        ::Color color{
-            props.color.r,
-            props.color.g,
-            props.color.b,
-            255
-        };
+        ::Color color{props.color.r, props.color.g, props.color.b, 255};
 
-        Rectangle bounds{
-            static_cast<float>(screenX),
-            static_cast<float>(screenY),
-            static_cast<float>(previewSize),
-            static_cast<float>(previewSize)
-        };
+        Rectangle bounds{static_cast<float>(screenX), static_cast<float>(screenY), static_cast<float>(previewSize), static_cast<float>(previewSize)};
 
         DrawRectangleRec(bounds, Fade(color, 0.18f));
         DrawRectangleLinesEx(bounds, 1.0f, Fade(color, 0.8f));
     }
 
-    void Renderer::renderGasCell(const Cell& cell, int x, int y) const {
-        const MaterialProperties& props = getMaterialProperties(cell.gas);
+    void Renderer::renderGasCell(const Cell &cell, int x, int y) const {
+        const MaterialProperties &props = getMaterialProperties(cell.gas);
 
         float maxLifetime = cell.gas == Material::Steam ? 110.0f : 350.0f;
         float maxOpacity = cell.gas == Material::Steam ? 0.75f : 0.65f;
@@ -104,12 +90,6 @@ namespace sandbox {
 
         ::Color color{props.color.r, props.color.g, props.color.b, 255};
 
-        DrawRectangle(
-            x * cellSize,
-            y * cellSize,
-            cellSize,
-            cellSize,
-            Fade(color, opacity * maxOpacity)
-        );
+        DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, Fade(color, opacity * maxOpacity));
     }
-}
+} // namespace sandbox

@@ -9,15 +9,8 @@ namespace sandbox {
     constexpr int windowHeight = 960;
     constexpr int cellSize = 8;
 
-
-    Application::Application() : 
-        grid(windowWidth / cellSize, windowHeight / cellSize),
-        simulation(),
-        renderer(cellSize),
-        brush(3),
-        inputHandler(cellSize),
-        uiRenderer()
-    {
+    Application::Application()
+        : grid(windowWidth / cellSize, windowHeight / cellSize), simulation(), renderer(cellSize), brush(3), inputHandler(cellSize), uiRenderer() {
         InitWindow(windowWidth, windowHeight, "Sandbox Lab");
         uiRenderer.load();
         SetTargetFPS(60);
@@ -51,9 +44,8 @@ namespace sandbox {
                     simulation.update(grid);
                     simulationAccumulator -= 1.0f;
                 }
-            }
-            else {
-                if(actions.stepSimulate) {
+            } else {
+                if (actions.stepSimulate) {
                     simulation.update(grid);
                 }
             }
@@ -62,7 +54,7 @@ namespace sandbox {
             ClearBackground(BLACK);
             renderer.render(grid);
             auto hoveredCell = inputHandler.getHoveredCell();
-            if(hoveredCell) {
+            if (hoveredCell) {
                 auto [x, y] = *hoveredCell;
                 renderer.renderBrushPreview(brush, x, y);
             }
@@ -71,4 +63,4 @@ namespace sandbox {
             EndDrawing();
         }
     }
-}
+} // namespace sandbox
