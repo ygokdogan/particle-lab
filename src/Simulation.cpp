@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <array>
 #include <utility>
+#include <random>
+
 #include "sandbox_lab/Simulation.hpp"
 #include "sandbox_lab/MaterialProperties.hpp"
 
@@ -15,7 +18,12 @@ namespace sandbox
             for (int x = startX; x != endX; x += stepX) {
                 Cell& cell = grid.getCell(x, y);
 
-                std::vector<Material> materials;
+                if (cell.gas == Material::Smoke &&
+                    cell.lastGasUpdatedFrame != currentFrame) {
+                    updateSmoke(grid, x, y);
+                }
+
+                std::vector<Material> materials;    
 
                 for (const LiquidLayer& layer : cell.liquids) {
                     materials.push_back(layer.material);
@@ -79,6 +87,39 @@ namespace sandbox
         if (canMoveLeft) {
             moveSolid(grid, x, y, MoveDirection::DownLeft);
             return;
+        }
+    }
+
+    void Simulation::updateSmoke(Grid &grid, int x, int y) {
+        Cell& cell = grid.getCell(x, y);
+
+        if (cell.gas != Material::Smoke || cell.lastGasUpdatedFrame == currentFrame) {
+            return;
+        }
+
+        cell.lastGasUpdatedFrame = currentFrame;
+
+        if (cell.gasLifetime <= 1) {
+            cell.gas = Material::Empty;
+            cell.gasLifetime = 0;
+            return;
+        }
+        --cell.gasLifetime;
+
+        bool leftFirst = randomDirection(rng) == 0;
+
+        std::array<MoveDirection, 5> directions{
+            MoveDirection::Up,
+            leftFirst ? MoveDirection::UpLeft : MoveDirection::UpRight,
+            leftFirst ? MoveDirection::UpRight : MoveDirection::UpLeft,
+            leftFirst ? MoveDirection::Left : MoveDirection::Right,
+            leftFirst ? MoveDirection::Right : MoveDirection::Left
+        };
+
+        for (MoveDirection direction : directions) {
+            if (moveSmoke(grid, x, y, direction)) {
+                return;
+            }
         }
     }
 
@@ -381,6 +422,10 @@ namespace sandbox
             return;
         }
 
+        if (std::bernoulli_distribution(0.08)(rng)) {
+            spawnSmoke(grid, x, y);
+        }
+
         std::bernoulli_distribution spreadChance(0.012);
 
         for (auto [dx, dy] : neighbors) {
@@ -420,6 +465,64 @@ namespace sandbox
 
         cell.burnTicks = 1;
         cell.burnDuration = std::uniform_int_distribution<int>(100, 240)(rng);
+    }
+
+    void Simulation::spawnSmoke(Grid &grid, int x, int y) {
+        std::array<std::pair<int, int>, 5> offsets{{
+            {0, -1},
+            {-1, -1},
+            {1, -1},
+            {-1, 0},
+            {1, 0}
+        }};
+
+        std::shuffle(offsets.begin(), offsets.end(), rng);
+
+        for (auto [dx, dy] : offsets) {
+            int targetX = x + dx;
+            int targetY = y + dy;
+
+            if (!grid.isValidCell(targetX, targetY)) {
+                continue;
+            }
+
+            Cell& target = grid.getCell(targetX, targetY);
+
+            if (target.solid != Material::Empty || !target.liquids.empty() || target.gas != Material::Empty) {
+                continue;
+            }
+
+            target.gas = Material::Smoke;
+            target.gasLifetime = std::uniform_int_distribution<int>(240, 350)(rng);
+            target.lastGasUpdatedFrame = currentFrame;
+
+            return;
+        }
+    }
+
+    bool Simulation::moveSmoke(Grid &grid, int x, int y, MoveDirection direction) {
+        auto [targetX, targetY] = getTargetPosition(x, y, direction);
+
+        if (!grid.isValidCell(x, y) || !grid.isValidCell(targetX, targetY)) {
+            return false;
+        }
+
+        Cell& source = grid.getCell(x, y);
+        Cell& target = grid.getCell(targetX, targetY);
+
+        if (source.gas != Material::Smoke || target.gas != Material::Empty || target.solid != Material::Empty ||
+            !target.liquids.empty()) {
+            return false;
+        }
+
+        target.gas = source.gas;
+        target.gasLifetime = source.gasLifetime;
+        target.lastGasUpdatedFrame = currentFrame;
+
+        source.gas = Material::Empty;
+        source.gasLifetime = 0;
+
+        return true;
     }
 
     bool Simulation::canMoveSolid(Grid& grid, int x, int y, MoveDirection direction) const {

@@ -20,6 +20,9 @@ namespace sandbox {
                 else if (!currentCell.liquids.empty()) {
                     renderLiquidCell(currentCell, x, y);
                 }
+                else if (currentCell.gas == Material::Smoke) {
+                    renderSmokeCell(currentCell, x, y);
+                }
             }
         }
     }
@@ -88,5 +91,20 @@ namespace sandbox {
 
         DrawRectangleRec(bounds, Fade(color, 0.18f));
         DrawRectangleLinesEx(bounds, 1.0f, Fade(color, 0.8f));
+    }
+
+    void Renderer::renderSmokeCell(const Cell& cell, int x, int y) const {
+        const MaterialProperties& props = getMaterialProperties(cell.gas);
+
+        float opacity = std::clamp(static_cast<float>(cell.gasLifetime) / 150.0f, 0.0f, 1.0f);
+        ::Color color{props.color.r, props.color.g, props.color.b, 255};
+
+        DrawRectangle(
+            x * cellSize,
+            y * cellSize,
+            cellSize,
+            cellSize,
+            Fade(color, opacity * 0.65f)
+        );
     }
 }

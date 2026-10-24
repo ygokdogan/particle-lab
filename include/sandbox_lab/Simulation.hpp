@@ -29,9 +29,13 @@ namespace sandbox {
             void displaceLiquidSideways(Grid& grid, int x, int y);
             
             void updatePowder(Grid& grid, int x, int y);
+            void updateSmoke(Grid& grid, int x, int y);
             void updateLiquid(Grid&, int x, int y, Material material);
             void updateWood(Grid& grid, int x, int y);
-            
+
             void igniteWood(Grid& grid, int x, int y);
+
+            void spawnSmoke(Grid& grid, int x, int y);
+            bool moveSmoke(Grid& grid, int x, int y, MoveDirection direction);
     };
 }

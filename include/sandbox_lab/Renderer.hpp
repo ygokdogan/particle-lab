@@ -15,5 +15,6 @@ namespace sandbox {
             
             void renderSolidCell(const Cell& cell, int x, int y) const;
             void renderLiquidCell(const Cell& cell, int x, int y) const;
+            void renderSmokeCell(const Cell& cell, int x, int y) const;
     };
 }

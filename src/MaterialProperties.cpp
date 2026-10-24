@@ -38,6 +38,11 @@ namespace sandbox {
             {255, 85, 20},
             2800.0f
         };
+        static const MaterialProperties smokeProperties {
+            Behaviour::Gas,
+            {160, 165, 175},
+            0.5f
+        };
 
         switch (material) {
             case Material::Empty:
@@ -54,6 +59,8 @@ namespace sandbox {
                 return woodProperties;
             case Material::Lava:
                 return lavaProperties;
+            case Material::Smoke:
+                return smokeProperties;
             default:
                 return emptyProperties; // Default to empty properties for unhandled materials
         }
