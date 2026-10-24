@@ -18,9 +18,12 @@ namespace sandbox
             for (int x = startX; x != endX; x += stepX) {
                 Cell& cell = grid.getCell(x, y);
 
-                if (cell.gas == Material::Smoke &&
-                    cell.lastGasUpdatedFrame != currentFrame) {
-                    updateSmoke(grid, x, y);
+                if (cell.gas != Material::Empty && cell.lastGasUpdatedFrame != currentFrame) {
+                    updateGas(grid, x, y);
+                }
+
+                if (grid.getLiquidAmount(x, y, Material::Lava) > 0.0f) {
+                    updateLava(grid, x, y);
                 }
 
                 std::vector<Material> materials;    
@@ -42,6 +45,18 @@ namespace sandbox
 
                 switch (properties.behaviour) {
                     case Behaviour::Powder:
+                        if (cell.solid == Material::CoolingRock) {
+                            bool canFall = canMoveSolid(grid, x, y, MoveDirection::Down);
+
+                            bool canFallLeft = canMoveSolid(grid, x, y, MoveDirection::DownLeft) && canMoveSolid(grid, x, y, MoveDirection::Left);
+
+                            bool canFallRight = canMoveSolid(grid, x, y, MoveDirection::DownRight) && canMoveSolid(grid, x, y, MoveDirection::Right);
+
+                            if (!canFall && !canFallLeft && !canFallRight) {
+                                cell.solid = Material::Stone;
+                                break;
+                            }
+                        }
                         updatePowder(grid, x, y);
                         break;
                     case Behaviour::Static:
@@ -55,6 +70,7 @@ namespace sandbox
             }
         }
 
+        coolLava(grid);
         scanLeftToRight = !scanLeftToRight;
     }
 
@@ -90,12 +106,15 @@ namespace sandbox
         }
     }
 
-    void Simulation::updateSmoke(Grid &grid, int x, int y) {
+    void Simulation::updateGas(Grid& grid, int x, int y) {
         Cell& cell = grid.getCell(x, y);
 
-        if (cell.gas != Material::Smoke || cell.lastGasUpdatedFrame == currentFrame) {
+        if (cell.gas == Material::Empty ||
+            cell.lastGasUpdatedFrame == currentFrame) {
             return;
         }
+
+        Material gas = cell.gas;
 
         cell.lastGasUpdatedFrame = currentFrame;
 
@@ -104,21 +123,36 @@ namespace sandbox
             cell.gasLifetime = 0;
             return;
         }
+
         --cell.gasLifetime;
 
-        bool leftFirst = randomDirection(rng) == 0;
+        int steps = gas == Material::Steam ? 2 : 1;
 
-        std::array<MoveDirection, 5> directions{
-            MoveDirection::Up,
-            leftFirst ? MoveDirection::UpLeft : MoveDirection::UpRight,
-            leftFirst ? MoveDirection::UpRight : MoveDirection::UpLeft,
-            leftFirst ? MoveDirection::Left : MoveDirection::Right,
-            leftFirst ? MoveDirection::Right : MoveDirection::Left
-        };
+        for (int step = 0; step < steps; ++step) {
+            bool leftFirst = randomDirection(rng) == 0;
 
-        for (MoveDirection direction : directions) {
-            if (moveSmoke(grid, x, y, direction)) {
-                return;
+            std::array<MoveDirection, 5> directions{
+                MoveDirection::Up,
+                leftFirst ? MoveDirection::UpLeft : MoveDirection::UpRight,
+                leftFirst ? MoveDirection::UpRight : MoveDirection::UpLeft,
+                leftFirst ? MoveDirection::Left : MoveDirection::Right,
+                leftFirst ? MoveDirection::Right : MoveDirection::Left
+            };
+
+            bool moved = false;
+
+            for (MoveDirection direction : directions) {
+                if (moveGas(grid, x, y, direction)) {
+                    auto [nx, ny] = getTargetPosition(x, y, direction);
+                    x = nx;
+                    y = ny;
+                    moved = true;
+                    break;
+                }
+            }
+
+            if (!moved) {
+                break;
             }
         }
     }
@@ -209,6 +243,13 @@ namespace sandbox
         }
 
         if (amount <= 0.0f) {
+            return 0.0f;
+        }
+
+        bool reactivePair = (material == Material::Water && grid.getLiquidAmount(targetX, targetY, Material::Lava) > 0.0f) ||
+            (material == Material::Lava && grid.getLiquidAmount(targetX, targetY, Material::Water) > 0.0f);
+
+        if (reactivePair) {
             return 0.0f;
         }
 
@@ -318,6 +359,43 @@ namespace sandbox
         }
 
         if (displacedMaterial == Material::Empty) {
+            return 0.0f;
+        }
+
+        if (material == Material::Water &&
+            grid.getLiquidAmount(targetX, targetY, Material::Lava) > 0.0f) {
+            return 0.0f;
+        }
+
+        if (material == Material::Lava &&
+            grid.getLiquidAmount(targetX, targetY, Material::Water) > 0.0f) {
+            bool downward = direction == MoveDirection::Down || direction == MoveDirection::DownLeft || direction == MoveDirection::DownRight;
+
+            if (downward) {
+                bool leftFirst = randomDirection(rng) == 0;
+
+                MoveDirection first = leftFirst ? MoveDirection::Left : MoveDirection::Right;
+
+                MoveDirection second = leftFirst ? MoveDirection::Right : MoveDirection::Left;
+
+                float waterAmount = grid.getLiquidAmount(targetX, targetY, Material::Water);
+
+                float moved = transferLiquid(
+                    grid, targetX, targetY, first, Material::Water, waterAmount
+                );
+
+                moved += transferLiquid(
+                    grid, targetX, targetY, second, Material::Water,
+                    waterAmount - moved
+                );
+
+                if (grid.getLiquidAmount(targetX, targetY, Material::Water) <= 0.0001f) {
+                    return transferLiquid(
+                        grid, x, y, direction, Material::Lava, amount
+                    );
+                }
+            }
+
             return 0.0f;
         }
 
@@ -452,6 +530,56 @@ namespace sandbox
         }
     }
 
+    void Simulation::updateLava(Grid &grid, int x, int y) {
+        float lavaAmount = grid.getLiquidAmount(x, y, Material::Lava);
+
+        if (lavaAmount <= 0.25f) {
+            return;
+        }
+
+        std::array<std::pair<int, int>, 4> offsets{{
+            {0, -1},
+            {0, 1},
+            {-1, 0},
+            {1, 0}
+        }};
+
+        std::shuffle(offsets.begin(), offsets.end(), rng);
+
+        std::bernoulli_distribution sandMeltChance(0.75);
+        std::bernoulli_distribution oilBurnChance(0.95);
+
+        float oilHere = grid.getLiquidAmount(x, y, Material::Oil);
+
+        if (oilHere > 0.0f && oilBurnChance(rng)) {
+            grid.removeLiquid(x, y, Material::Oil, oilHere);
+        }
+
+        for (auto [dx, dy] : offsets) {
+            int nx = x + dx;
+            int ny = y + dy;
+
+            if (!grid.isValidCell(nx, ny)) {
+                continue;
+            }
+
+            Cell& neighbor = grid.getCell(nx, ny);
+
+            if (neighbor.solid == Material::Sand) {
+                if (sandMeltChance(rng)) {
+                    grid.eraseCell(nx, ny);
+                }
+                continue;
+            }
+
+            float oilAmount = grid.getLiquidAmount(nx, ny, Material::Oil);
+
+            if (oilAmount > 0.0f && oilBurnChance(rng)) {
+                grid.removeLiquid(nx, ny, Material::Oil, oilAmount);
+            }
+        }
+    }
+
     void Simulation::igniteWood(Grid& grid, int x, int y) {
         if (!grid.isValidCell(x, y)) {
             return;
@@ -500,19 +628,32 @@ namespace sandbox
         }
     }
 
-    bool Simulation::moveSmoke(Grid &grid, int x, int y, MoveDirection direction) {
+    bool Simulation::moveGas(Grid& grid, int x, int y, MoveDirection direction) {
         auto [targetX, targetY] = getTargetPosition(x, y, direction);
 
-        if (!grid.isValidCell(x, y) || !grid.isValidCell(targetX, targetY)) {
+        if (!grid.isValidCell(x, y) ||
+            !grid.isValidCell(targetX, targetY)) {
             return false;
         }
 
         Cell& source = grid.getCell(x, y);
         Cell& target = grid.getCell(targetX, targetY);
 
-        if (source.gas != Material::Smoke || target.gas != Material::Empty || target.solid != Material::Empty ||
-            !target.liquids.empty()) {
+        if (source.gas == Material::Empty || target.gas != Material::Empty || target.solid != Material::Empty) {
             return false;
+        }
+
+        if (source.gas == Material::Smoke && !target.liquids.empty()) {
+            return false;
+        }
+
+        if (source.gas == Material::Steam) {
+            float totalLiquid = grid.getTotalLiquidAmount(targetX, targetY);
+            float waterAmount = grid.getLiquidAmount(targetX, targetY, Material::Water);
+
+            if (totalLiquid - waterAmount > 0.001f) {
+                return false;
+            }
         }
 
         target.gas = source.gas;
@@ -523,6 +664,121 @@ namespace sandbox
         source.gasLifetime = 0;
 
         return true;
+    }
+
+    void Simulation::coolLava(Grid& grid) {
+        constexpr std::array<std::pair<int, int>, 4> offsets{{
+            {0, -1}, {0, 1}, {-1, 0}, {1, 0}
+        }};
+
+        for (int y = 0; y < grid.getHeight(); ++y) {
+            for (int x = 0; x < grid.getWidth(); ++x) {
+                Cell& cell = grid.getCell(x, y);
+
+                if (grid.getLiquidAmount(x, y, Material::Lava) <= 0.0f) {
+                    cell.coolingTicks = 0;
+                    continue;
+                }
+
+                int waterX = -1;
+                int waterY = -1;
+
+                if (grid.getLiquidAmount(x, y, Material::Water) > 0.001f) {
+                    waterX = x;
+                    waterY = y;
+                }
+
+                for (auto [dx, dy] : offsets) {
+                    if (waterX != -1) {
+                        break;
+                    }
+
+                    int nx = x + dx;
+                    int ny = y + dy;
+
+                    if (!grid.isValidCell(nx, ny)) {
+                        continue;
+                    }
+
+                    if (grid.getLiquidAmount(nx, ny, Material::Water) > 0.001f) {
+                        waterX = nx;
+                        waterY = ny;
+                    }
+                }
+
+                if (waterX == -1) {
+                    cell.coolingTicks = 0;
+                    continue;
+                }
+
+                if (cell.coolingTicks == 0) {
+                    cell.coolingTicks = std::uniform_int_distribution<int>(1, 12)(rng);
+                }
+
+                ++cell.coolingTicks;
+
+                if (cell.coolingTicks < 24) {
+                    continue;
+                }
+
+                float waterAmount =
+                    grid.getLiquidAmount(waterX, waterY, Material::Water);
+
+                grid.removeLiquid(
+                    waterX,
+                    waterY,
+                    Material::Water,
+                    std::min(waterAmount, 0.25f)
+                );
+
+                grid.eraseCell(x, y);
+                grid.placeSolid(x, y, Material::CoolingRock);
+
+                spawnSteam(grid, x, y);
+            }
+        }
+    }
+
+    void Simulation::spawnSteam(Grid& grid, int x, int y) {
+        std::array<std::pair<int, int>, 5> offsets{{
+            {0, -1},
+            {-1, -1},
+            {1, -1},
+            {-1, 0},
+            {1, 0}
+        }};
+
+        std::shuffle(offsets.begin(), offsets.end(), rng);
+
+        for (auto [dx, dy] : offsets) {
+            int nx = x + dx;
+            int ny = y + dy;
+
+            if (!grid.isValidCell(nx, ny)) {
+                continue;
+            }
+
+            Cell& target = grid.getCell(nx, ny);
+
+            if (target.solid != Material::Empty ||
+                target.gas != Material::Empty) {
+                continue;
+            }
+
+            float totalLiquid = grid.getTotalLiquidAmount(nx, ny);
+            float waterAmount = grid.getLiquidAmount(nx, ny, Material::Water);
+
+            if (totalLiquid - waterAmount > 0.001f) {
+                continue;
+            }
+
+            target.gas = Material::Steam;
+            target.gasLifetime =
+                std::uniform_int_distribution<int>(65, 110)(rng);
+            target.lastGasUpdatedFrame = currentFrame;
+
+            return;
+        }
     }
 
     bool Simulation::canMoveSolid(Grid& grid, int x, int y, MoveDirection direction) const {

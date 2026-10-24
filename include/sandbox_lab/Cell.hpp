@@ -23,5 +23,7 @@ namespace sandbox
         
         std::uint16_t burnTicks = 0;
         std::uint16_t burnDuration = 0;
+
+        std::uint16_t coolingTicks = 0;
     };
 }

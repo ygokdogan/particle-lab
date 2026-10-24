@@ -9,6 +9,8 @@ namespace sandbox {
         Oil,
         Wood,
         Lava,
-        Smoke
+        CoolingRock,
+        Smoke,
+        Steam,
     };
 }

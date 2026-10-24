@@ -20,8 +20,10 @@ namespace sandbox {
                 else if (!currentCell.liquids.empty()) {
                     renderLiquidCell(currentCell, x, y);
                 }
-                else if (currentCell.gas == Material::Smoke) {
-                    renderSmokeCell(currentCell, x, y);
+
+                if (currentCell.gas != Material::Empty &&
+                    currentCell.solid == Material::Empty) {
+                    renderGasCell(currentCell, x, y);
                 }
             }
         }
@@ -93,10 +95,13 @@ namespace sandbox {
         DrawRectangleLinesEx(bounds, 1.0f, Fade(color, 0.8f));
     }
 
-    void Renderer::renderSmokeCell(const Cell& cell, int x, int y) const {
+    void Renderer::renderGasCell(const Cell& cell, int x, int y) const {
         const MaterialProperties& props = getMaterialProperties(cell.gas);
 
-        float opacity = std::clamp(static_cast<float>(cell.gasLifetime) / 150.0f, 0.0f, 1.0f);
+        float maxLifetime = cell.gas == Material::Steam ? 110.0f : 350.0f;
+        float maxOpacity = cell.gas == Material::Steam ? 0.75f : 0.65f;
+        float opacity = std::clamp(static_cast<float>(cell.gasLifetime) / maxLifetime, 0.0f, 1.0f);
+
         ::Color color{props.color.r, props.color.g, props.color.b, 255};
 
         DrawRectangle(
@@ -104,7 +109,7 @@ namespace sandbox {
             y * cellSize,
             cellSize,
             cellSize,
-            Fade(color, opacity * 0.65f)
+            Fade(color, opacity * maxOpacity)
         );
     }
 }
