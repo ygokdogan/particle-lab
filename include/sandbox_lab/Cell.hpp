@@ -16,5 +16,8 @@ namespace sandbox
         Material solid = Material::Empty;
         std::vector<LiquidLayer> liquids;
         std::uint64_t lastUpdatedFrame = 0;
+        
+        std::uint16_t burnTicks = 0;
+        std::uint16_t burnDuration = 0;
     };
 }

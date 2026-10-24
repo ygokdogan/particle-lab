@@ -30,5 +30,8 @@ namespace sandbox {
             
             void updatePowder(Grid& grid, int x, int y);
             void updateLiquid(Grid&, int x, int y, Material material);
+            void updateWood(Grid& grid, int x, int y);
+            
+            void igniteWood(Grid& grid, int x, int y);
     };
 }

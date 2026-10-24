@@ -111,6 +111,12 @@ namespace sandbox
         if (IsKeyPressed(KEY_FOUR)) {
             brush.setMaterial(Material::Oil);
         }
+        if (IsKeyPressed(KEY_FIVE)) {
+            brush.setMaterial(Material::Wood);
+        }
+        if (IsKeyPressed(KEY_SIX)) {
+            brush.setMaterial(Material::Lava);
+        }
     }
 
     void InputHandler::handleBrushSizeChange(Brush& brush) {

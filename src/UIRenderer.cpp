@@ -13,7 +13,9 @@ namespace sandbox
         {Material::Stone, "Stone", 1},
         {Material::Sand,  "Sand",  2},
         {Material::Water, "Water", 3},
-        {Material::Oil,   "Oil",   4}
+        {Material::Oil,   "Oil",   4},
+        {Material::Wood,  "Wood",  5},
+        {Material::Lava,  "Lava",  6}
     };
 
     void UIRenderer::load() {
@@ -27,7 +29,7 @@ namespace sandbox
 
     void UIRenderer::render(const Brush &brush, float simulationSpeed, bool paused) const {
         constexpr int panelWidth = 250;
-        constexpr int panelHeight = 410;
+        constexpr int panelHeight = 464;
         constexpr int padding = 16;
 
         int panelX = GetScreenWidth() - panelWidth - 12;
@@ -53,13 +55,13 @@ namespace sandbox
 
         drawSimulationInfo(
             contentX,
-            panelY + 200,
+            panelY + 254,
             brush.getSize(),
             simulationSpeed,
             paused
         );
 
-        drawControls(contentX, panelY + 315);
+        drawControls(contentX, panelY + 369);
     }
 
     void UIRenderer::drawText(const char* text, int x, int y, float size, Color color) const {

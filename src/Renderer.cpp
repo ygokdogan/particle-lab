@@ -28,6 +28,17 @@ namespace sandbox {
         const MaterialProperties& props = getMaterialProperties(cell.solid);
 
         ::Color color {props.color.r, props.color.g, props.color.b, 255};
+
+        if (cell.solid == Material::Wood && cell.burnTicks > 0) {
+            float progress = static_cast<float>(cell.burnTicks) / cell.burnDuration;
+
+            ::Color burningColor{255, 115, 35, 255};
+            ::Color charredColor{45, 35, 30, 255};
+
+            color = ColorLerp(color, burningColor, 0.7f);
+            color = ColorLerp(color, charredColor, progress);
+        }
+
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
 

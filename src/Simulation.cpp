@@ -36,6 +36,11 @@ namespace sandbox
                     case Behaviour::Powder:
                         updatePowder(grid, x, y);
                         break;
+                    case Behaviour::Static:
+                        if (cell.solid == Material::Wood) {
+                            updateWood(grid, x ,y);
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -345,6 +350,76 @@ namespace sandbox
                 transferLiquid(grid, x, y, firstDirection, material, amount);
             }
         }
+    }
+
+    void Simulation::updateWood(Grid& grid, int x, int y) {
+        constexpr std::array<std::pair<int, int>, 8> neighbors{{
+            {-1, -1}, {0, -1}, {1, -1},
+            {-1,  0},          {1,  0},
+            {-1,  1}, {0,  1}, {1,  1}
+        }};
+
+        Cell& cell = grid.getCell(x, y);
+
+        if (cell.burnTicks == 0) {
+            std::bernoulli_distribution ignitionChance(0.02);
+
+            for (auto [dx, dy] : neighbors) {
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (!grid.isValidCell(nx, ny)) {
+                    continue;
+                }
+
+                if (grid.getLiquidAmount(nx, ny, Material::Lava) >= 0.25f &&
+                    ignitionChance(rng)) {
+                    igniteWood(grid, x, y);
+                    return;
+                }
+            }
+            return;
+        }
+
+        std::bernoulli_distribution spreadChance(0.012);
+
+        for (auto [dx, dy] : neighbors) {
+            int nx = x + dx;
+            int ny = y + dy;
+
+            if (!grid.isValidCell(nx, ny)) {
+                continue;
+            }
+
+            const Cell& neighbor = grid.getCell(nx, ny);
+
+            if (neighbor.solid == Material::Wood &&
+                neighbor.burnTicks == 0 &&
+                spreadChance(rng)) {
+                igniteWood(grid, nx, ny);
+            }
+        }
+
+        ++cell.burnTicks;
+
+        if (cell.burnTicks >= cell.burnDuration) {
+            grid.eraseCell(x, y);
+        }
+    }
+
+    void Simulation::igniteWood(Grid& grid, int x, int y) {
+        if (!grid.isValidCell(x, y)) {
+            return;
+        }
+
+        Cell& cell = grid.getCell(x, y);
+
+        if (cell.solid != Material::Wood || cell.burnTicks != 0) {
+            return;
+        }
+
+        cell.burnTicks = 1;
+        cell.burnDuration = std::uniform_int_distribution<int>(100, 240)(rng);
     }
 
     bool Simulation::canMoveSolid(Grid& grid, int x, int y, MoveDirection direction) const {

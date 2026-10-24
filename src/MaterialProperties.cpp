@@ -28,6 +28,17 @@ namespace sandbox {
             900.0f
         };
 
+        static const MaterialProperties woodProperties {
+            Behaviour::Static,
+            {139, 90, 43},
+            700.0f
+        };
+        static const MaterialProperties lavaProperties {
+            Behaviour::Liquid,
+            {255, 85, 20},
+            2800.0f
+        };
+
         switch (material) {
             case Material::Empty:
                 return emptyProperties;
@@ -39,6 +50,10 @@ namespace sandbox {
                 return waterProperties;
             case Material::Oil:
                 return oilProperties;
+            case Material::Wood:
+                return woodProperties;
+            case Material::Lava:
+                return lavaProperties;
             default:
                 return emptyProperties; // Default to empty properties for unhandled materials
         }

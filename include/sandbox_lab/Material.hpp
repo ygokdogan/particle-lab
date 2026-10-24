@@ -7,5 +7,7 @@ namespace sandbox {
         Sand,
         Water,
         Oil,
+        Wood,
+        Lava,
     };
 }
