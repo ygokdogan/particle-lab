@@ -9,7 +9,7 @@ namespace sandbox {
     public:
         LiquidPhysics(std::mt19937 &rng, std::uniform_int_distribution<int> &randomDirection);
 
-        void updateLiquid(Grid &grid, int x, int y, Material material);
+        void updateLiquid(Grid &grid, int x, int y, Material material, uint16_t frame);
         void displaceLiquidSideways(Grid &grid, int x, int y);
 
     private:
@@ -21,6 +21,7 @@ namespace sandbox {
         float balanceLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material);
         void spreadLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material);
         float displaceLiquid(Grid &grid, int x, int y, MoveDirection direction, Material material, float amount);
-        bool fallLiquid(Grid &grid, int x, int y, Material material);
+        bool fallLiquid(Grid &grid, int x, int y, Material material, uint16_t frame);
+        void applyImpactSpread(Grid& grid, int x, int y, Material material, float impactSpeed);
     };
 }

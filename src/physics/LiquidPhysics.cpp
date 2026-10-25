@@ -1,50 +1,29 @@
-#include "sandbox_lab/LiquidPhysics.hpp"
-#include "sandbox_lab/MaterialProperties.hpp"
 #include <algorithm>
 
+#include "sandbox_lab/LiquidProperties.hpp"
+#include "sandbox_lab/LiquidPhysics.hpp"
+#include "sandbox_lab/MaterialProperties.hpp"
+
 namespace sandbox {
-    struct LiquidFlow {
-        float vertical;
-        float diagonal;
-        float horizontal;
-    };
-
-    LiquidFlow getLiquidFlow(Material material) {
-        switch (material) {
-            case Material::Water:
-                return {1.0f, 1.0f, 1.0f};
-
-            case Material::Oil:
-                return {1.0f, 0.6f, 0.5f};
-
-            case Material::Lava:
-                return {1.0f, 0.35f, 0.25f};
-
-            default:
-                return {1.0f, 1.0f, 1.0f};
-        }
-    }
-
     LiquidPhysics::LiquidPhysics(std::mt19937 &rng, std::uniform_int_distribution<int> &randomDirection) : rng(rng), randomDirection(randomDirection) {}
 
-    void LiquidPhysics::updateLiquid(Grid& grid, int x, int y, Material material) {
-        if (fallLiquid(grid, x, y, material)) {
-            return;
-        }
+    void LiquidPhysics::updateLiquid(Grid& grid, int x, int y, Material material, uint16_t frame) {
+        LiquidLayer* layer = grid.getLiquidLayer(x, y, material);
+        if (!layer || layer->lastUpdatedFrame == frame) return;
+        if (fallLiquid(grid, x, y, material, frame)) return;
 
-        LiquidFlow flow = getLiquidFlow(material);
-
+        const LiquidProperties& properties = getLiquidProperties(material);
+        
         float amount = grid.getLiquidAmount(x, y, material);
-
         if (amount <= 0.0f) {
             return;
         }
 
-        transferLiquid(grid, x, y, MoveDirection::Down,material, amount * flow.vertical);
+        transferLiquid(grid, x, y, MoveDirection::Down,material, amount * properties.verticalFlow);
         amount = grid.getLiquidAmount(x, y, material);
 
         if (amount > 0.0f) {
-            displaceLiquid(grid, x, y, MoveDirection::Down,material, amount * flow.vertical);
+            displaceLiquid(grid, x, y, MoveDirection::Down,material, amount * properties.verticalFlow);
         }
 
         amount = grid.getLiquidAmount(x, y, material);
@@ -64,18 +43,18 @@ namespace sandbox {
 
         if (canFlowFirst) {
             amount = grid.getLiquidAmount(x, y, material);
-            transferLiquid(grid, x, y, firstDirection,material, amount * flow.diagonal);
+            transferLiquid(grid, x, y, firstDirection,material, amount * properties.diagonalFlow);
 
             amount = grid.getLiquidAmount(x, y, material);
-            displaceLiquid(grid, x, y, firstDirection, material, amount * flow.diagonal);
+            displaceLiquid(grid, x, y, firstDirection, material, amount * properties.diagonalFlow);
         }
 
         if (canFlowSecond) {
             amount = grid.getLiquidAmount(x, y, material);
-            transferLiquid(grid, x, y, secondDirection,material, amount * flow.diagonal);
+            transferLiquid(grid, x, y, secondDirection,material, amount * properties.diagonalFlow);
 
             amount = grid.getLiquidAmount(x, y, material);
-            displaceLiquid(grid, x, y, secondDirection,material, amount * flow.diagonal);
+            displaceLiquid(grid, x, y, secondDirection,material, amount * properties.diagonalFlow);
         }
 
         bool balanceLeftFirst = randomDirection(rng) == 0;
@@ -149,7 +128,7 @@ namespace sandbox {
             return 0.0f;
         }
 
-        float flowAmount = (diff / 2.0f) * getLiquidFlow(material).horizontal;
+        float flowAmount = (diff / 2.0f) * getLiquidProperties(material).horizontalFlow;
         float transferred = transferLiquid(grid, x, y, direction, material, flowAmount);
         float remaining = flowAmount - transferred;
 
@@ -322,101 +301,101 @@ namespace sandbox {
         }
     }
 
-    bool LiquidPhysics::fallLiquid(Grid &grid, int x, int y, Material material) {
-        if (!grid.isValidCell(x, y+1)) {
-            return false;
+    bool LiquidPhysics::fallLiquid(Grid &grid, int x, int y, Material material, std::uint16_t frame) {
+        LiquidLayer* bottom = grid.getLiquidLayer(x, y, material);
+
+        if (!bottom || bottom->lastUpdatedFrame == frame) return false;
+        if (grid.isValidCell(x, y+1) && grid.getLiquidAmount(x, y+1, material) > 0.0f) return false;
+
+        int topY = y;
+        while (topY > 0) {
+            const Cell& cell = grid.getCell(x, topY - 1);
+            if (cell.solid != Material::Empty || cell.liquids.size() != 1) break;
+            if (cell.liquids.front().material != material) break;
+            if (cell.liquids.front().lastUpdatedFrame == frame) break;
+            --topY;
         }
 
-        Cell &below = grid.getCell(x, y+1);
-        if (below.solid != Material::Empty || !below.liquids.empty()) {
-            for (LiquidLayer& layer : grid.getCell(x, y).liquids) {
-                if (layer.material == material) {
-                    layer.velocityY = 0.0f;
-                    break;
-                }
-            }
-
-            return false;
-        }
-        float gravity = 0.4f;
-        float maxVelocity = 5.0f;
+        const LiquidProperties props = getLiquidProperties(material);
         float velocityY = 0.0f;
 
-        switch (material) {
-            case Material::Water:
-                gravity = 0.4f;
-                maxVelocity = 3.5f;
-                break;
-            case Material::Oil:
-                gravity = 0.35f;
-                maxVelocity = 3.0f;
-                break;
-            case Material::Lava:
-                gravity = 0.2f;
-                maxVelocity = 2.0f;
-                break;
-            default:
-                break;
-        }
-        
-        for (LiquidLayer& layer : grid.getCell(x, y).liquids) {
-            if (layer.material == material) {
-                layer.velocityY = std::min(layer.velocityY + gravity, maxVelocity);
-                velocityY = layer.velocityY;
-                break;
-            }
+        for (int row = topY; row <= y; row++) {
+            LiquidLayer* layer = grid.getLiquidLayer(x, row, material);
+            velocityY = std::max(velocityY, layer->velocityY);
         }
 
-        int steps = std::max(1, static_cast<int>(velocityY));
-        int currentY = y;
-
-        for (int i = 0; i < steps; ++i) {
-            int nextY = currentY + 1;
-
-            if (!grid.isValidCell(x, nextY)) {
-                break;
+        if (!grid.isEmptyCell(x, y+1)) {
+            for (int row = topY; row <= y; row++) {
+                grid.getLiquidLayer(x, row, material)->velocityY = 0.0f;
             }
 
-            const Cell& target = grid.getCell(x, nextY);
-            if (target.solid != Material::Empty || !target.liquids.empty()) {
-                break;
-            }
-
-            float amount = grid.getLiquidAmount(x, currentY, material);
-            if (amount <= 0.0f) {
-                break;
-            }
-
-            float moved = transferLiquid(grid,x,currentY,MoveDirection::Down,material,amount);
-            if (moved <= 0.0f) {
-                break;
-            }
-
-            ++currentY;
-            if (moved < amount - 0.0001f) {
-                break;
-            }
+            applyImpactSpread(grid, x, y, material, velocityY);
+            return false;
         }
 
-        if (currentY != y) {
-            bool blocked = !grid.isValidCell(x, currentY + 1);
+        velocityY = std::min(velocityY + props.gravity, props.maxVelocity);
+        int requestedSteps = std::max(1, static_cast<int>(velocityY));
+        int steps = 0;
 
-            if (!blocked) {
-                const Cell& next = grid.getCell(x, currentY + 1);
-                blocked = next.solid != Material::Empty || !next.liquids.empty();
+        for (int i = 1; i <= requestedSteps; i++) {
+            if (!grid.isEmptyCell(x, y + i)) break;
+            ++steps;
+        }
+
+        if (steps == 0) return false;
+
+        for (int row = y; row >= topY; row--) {
+            std::swap(grid.getCell(x, row).liquids, grid.getCell(x, row + steps).liquids);
+            LiquidLayer* moved = grid.getLiquidLayer(x, row + steps, material);
+            moved->velocityY = velocityY;
+            moved->lastUpdatedFrame = frame;
+        }
+
+        if (!grid.isEmptyCell(x, y + steps + 1)) {
+            for (int row = topY + steps; row <= y + steps; ++row) {
+                grid.getLiquidLayer(x, row, material)->velocityY = 0.0f;
             }
+            applyImpactSpread(grid, x, y + steps, material, velocityY);
+        }
 
-            if (blocked) {
-                for (LiquidLayer& layer :
-                    grid.getCell(x, currentY).liquids) {
-                    if (layer.material == material) {
-                        layer.velocityY = 0.0f;
-                        break;
+        return true;
+    }
+
+    void LiquidPhysics::applyImpactSpread(Grid& grid, int x, int y, Material material, float impactSpeed) {
+        const LiquidProperties& properties = getLiquidProperties(material);
+        if (impactSpeed < properties.minImpactSpeed) return;
+
+        int passes = std::clamp(static_cast<int>(impactSpeed / properties.impactSpeedPerPass), 1, properties.maxImpactPasses);
+
+        for (int i = 0; i < passes; ++i) {
+            bool leftFirst = randomDirection(rng) == 0;
+
+            for (int side = 0; side < 2; side++) {
+                bool left = side == 0 ? leftFirst : !leftFirst;
+                int dx = left ? -1 : 1;
+                MoveDirection diagonal = left ? MoveDirection::DownLeft : MoveDirection::DownRight;
+                MoveDirection horizontal = left ? MoveDirection::Left : MoveDirection::Right;
+
+                for (int distance = horizontalFlowDistance; distance >= 1; --distance) {
+                    int sourceX = x + (distance - 1) * dx;
+                    int targetX = sourceX + dx;
+
+                    if (!grid.isValidCell(sourceX, y) || !grid.isValidCell(targetX, y)) continue;
+                    if (grid.getCell(targetX, y).solid != Material::Empty) continue;
+
+                    float amount = grid.getLiquidAmount(sourceX, y, material);
+                    if (amount <= 0.0f) continue;
+
+                    float moved = 0.0f;
+                    if (grid.isValidCell(targetX, y+1)) {
+                        moved = transferLiquid(grid, sourceX, y, diagonal, material, amount);
+                    }
+
+                    if (moved <= 0.0f) {
+                        transferLiquid(grid, sourceX, y, horizontal, material, amount);
                     }
                 }
             }
         }
-
-        return currentY != y;
     }
 }

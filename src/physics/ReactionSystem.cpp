@@ -92,6 +92,7 @@ namespace sandbox {
             if (neighbor.solid == Material::Sand) {
                 if (sandMeltChance(rng)) {
                     grid.eraseCell(nx, ny);
+                    gasPhysics.spawnSmoke(grid, nx, ny);
                 }
                 continue;
             }
@@ -175,7 +176,6 @@ namespace sandbox {
                 float waterAmount = grid.getLiquidAmount(waterX, waterY, Material::Water);
 
                 grid.removeLiquid(waterX, waterY, Material::Water, std::min(waterAmount, 0.25f));
-
                 grid.eraseCell(x, y);
                 grid.placeSolid(x, y, Material::CoolingRock);
 

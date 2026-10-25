@@ -10,6 +10,7 @@ namespace sandbox {
         Material material;
         float amount;
         float velocityY = 0.0f;
+        uint16_t lastUpdatedFrame = 0;
     };
 
     struct Cell {

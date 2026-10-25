@@ -24,12 +24,12 @@ namespace sandbox {
         float getLiquidAmount(int x, int y, Material material) const;
         float addLiquid(int x, int y, Material material, float amount, float velocityY = 0.0f);
         float removeLiquid(int x, int y, Material material, float amount);
-
+        
+        LiquidLayer *getLiquidLayer(int x, int y, Material material);
     private:
         int width;
         int height;
         std::vector<Cell> cells;
 
-        LiquidLayer *getLiquidLayer(int x, int y, Material material);
     };
 } // namespace sandbox

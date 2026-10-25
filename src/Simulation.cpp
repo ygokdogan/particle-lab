@@ -38,7 +38,7 @@ namespace sandbox {
                 }
                 for (Material material : materials) {
                     if (grid.getLiquidAmount(x, y, material) > 0.0f) {
-                        liquidPhysics.updateLiquid(grid, x, y, material);
+                        liquidPhysics.updateLiquid(grid, x, y, material, currentFrame);
                     }
                 }
 
