@@ -1,24 +1,43 @@
 #pragma once
 
 #include <raylib.h>
+#include <array>
 #include "Brush.hpp"
 
 namespace sandbox {
+    struct UIActions {
+        bool togglePause = false;
+        bool stepSimulate = false;
+        bool speedUp = false;
+        bool speedDown = false;
+        bool clear = false;
+    };
+
     class UIRenderer {
-    public:
-        void load();
-        void unload();
+        public:
+            void load();
+            void unload();
+            UIActions update(Brush &brush);
 
-        void render(const Brush &brush, float simulationSpeed, bool paused) const;
+            bool isPointerOverUI() const;
+            bool isEraserSelected() const { return eraserSelected; }
 
-    private:
-        Font font{};
+            void render(const Brush &brush, float simulationSpeed, bool paused) const;
+        private:
+            std::array<Font, 6> fonts{};
+            std::array<Texture2D, 8> icons{};
+            float fontScale = 0.0f;
+            void refreshFonts();
+            void unloadFonts();
+            const Font& textFont(float size) const;
+            void drawIcon(int index, Rectangle bounds, Color color) const;
+            void drawButton(Rectangle bounds, bool selected, Color tint) const;
 
-        void drawHeader(int x, int y) const;
-        void drawMaterials(int x, int y, Material selectedMaterial) const;
-        void drawSimulationInfo(int x, int y, int brushSize, float simulationSpeed, bool paused) const;
-        void drawControls(int x, int y) const;
+            bool visible = true;
+            bool eraserSelected = false;
 
-        void drawText(const char *text, int x, int y, float size, Color color) const;
+            void drawPanel(Rectangle bounds) const;
+            void drawCenteredText(const char* text, Rectangle bounds, float size, Color color) const;
+            void drawText(const char *text, float x, float y, float size, Color color) const;
     };
 } // namespace sandbox

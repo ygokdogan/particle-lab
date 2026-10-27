@@ -40,6 +40,12 @@ namespace sandbox {
             color = ColorLerp(color, charredColor, progress);
         }
 
+        if (cell.solid == Material::Sand || cell.solid == Material::Stone || cell.solid == Material::Wood) {
+            unsigned hash = static_cast<unsigned>(x) * 73856093u ^ static_cast<unsigned>(y) * 19349663u;
+            float variation = (static_cast<int>(hash % 11) - 5) * 0.010f;
+            color = ColorBrightness(color, variation);
+        }
+
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
 
@@ -62,7 +68,7 @@ namespace sandbox {
         DrawRectangle(x * cellSize, y * cellSize, cellSize, cellSize, color);
     }
 
-    void Renderer::renderBrushPreview(const Brush &brush, int gridX, int gridY) const {
+    void Renderer::renderBrushPreview(const Brush &brush, int gridX, int gridY, bool erasing) const {
         int brushSize = brush.getSize();
         int radius = brushSize / 2;
 
@@ -77,6 +83,7 @@ namespace sandbox {
 
         Rectangle bounds{static_cast<float>(screenX), static_cast<float>(screenY), static_cast<float>(previewSize), static_cast<float>(previewSize)};
 
+        if (erasing) color = {227, 151, 151, 255};
         DrawRectangleRec(bounds, Fade(color, 0.18f));
         DrawRectangleLinesEx(bounds, 1.0f, Fade(color, 0.8f));
     }

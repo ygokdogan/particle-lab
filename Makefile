@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -g -Iinclude $(shell pkg-config --cflags ray
 LDLIBS = $(shell pkg-config --libs raylib)
 
 SRC = $(wildcard src/*.cpp src/physics/*.cpp)
-TARGET = main
+TARGET = particle_lab
 
 all: $(TARGET)
 

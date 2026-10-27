@@ -9,13 +9,9 @@ namespace sandbox {
         static const MaterialProperties oilProperties{Behaviour::Liquid, {169, 139, 45}, 900.0f};
 
         static const MaterialProperties woodProperties{Behaviour::Static, {139, 90, 43}, 700.0f};
-        static const MaterialProperties lavaProperties{Behaviour::Liquid, {255, 85, 20}, 2800.0f};
+        static const MaterialProperties lavaProperties{Behaviour::Liquid, {244, 117, 40}, 2800.0f};
         static const MaterialProperties smokeProperties{Behaviour::Gas, {160, 165, 175}, 0.5f};
-        static const MaterialProperties coolingRockProperties{
-            Behaviour::Powder,
-            {65, 68, 75},
-            3000.0f,
-        };
+        static const MaterialProperties coolingRockProperties{Behaviour::Powder, {65, 68, 75}, 3000.0f,};
         static const MaterialProperties steamProperties{Behaviour::Gas, {210, 218, 225}, 0.3f};
 
         switch (material) {
@@ -40,8 +36,7 @@ namespace sandbox {
         case Material::CoolingRock:
             return coolingRockProperties;
         default:
-            return emptyProperties; // Default to empty properties for unhandled
-                                    // materials
+            return emptyProperties; // Default to empty properties for unhandled materials
         }
     }
 } // namespace sandbox

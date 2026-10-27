@@ -8,7 +8,7 @@ namespace sandbox {
     public:
         explicit Renderer(int cellSize);
         void render(const Grid &grid);
-        void renderBrushPreview(const Brush &brush, int gridX, int gridY) const;
+        void renderBrushPreview(const Brush &brush, int gridX, int gridY, bool erasing = false) const;
 
     private:
         int cellSize;

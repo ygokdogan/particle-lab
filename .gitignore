@@ -1,5 +1,6 @@
 # Compiled files
 /main
+/particle_lab
 *.o
 *.dSYM/
 /build/

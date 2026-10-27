@@ -17,25 +17,32 @@ namespace sandbox {
         return actions;
     }
 
-    InputActions InputHandler::update(Grid &grid, Brush &brush) {
+    InputActions InputHandler::update(Grid& grid, Brush& brush, int canvasX, int canvasY, bool eraserSelected, bool pointerBlocked) {
         InputActions actions = handleSimulationControls();
         handleBrushSizeChange(brush);
         handleMaterialSelection(brush);
 
-        bool erasing = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
-        bool painting = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
 
-        int gridX = mouseX / cellSize;
-        int gridY = mouseY / cellSize;
+        int gridX = (mouseX - canvasX) / cellSize;
+        int gridY = (mouseY - canvasY) / cellSize;
 
-        if (mouseX < 0 || mouseY < 0 || !grid.isValidCell(gridX, gridY)) {
+        bool outsideCanvas = mouseX < canvasX || mouseY < canvasY ||
+            mouseX >= canvasX + grid.getWidth() * cellSize ||
+            mouseY >= canvasY + grid.getHeight() * cellSize;
+
+        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) strokeBlocked = false;
+        if ((IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) && (outsideCanvas || pointerBlocked)) strokeBlocked = true;
+
+        if (outsideCanvas || pointerBlocked || strokeBlocked) {
             previousMouseCell.reset();
             hoveredCell.reset();
             return actions;
         }
+
+        bool painting = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool erasing = IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || (painting && eraserSelected);
 
         hoveredCell = std::make_pair(gridX, gridY);
 
@@ -96,16 +103,16 @@ namespace sandbox {
             brush.setMaterial(Material::Stone);
         }
         if (IsKeyPressed(KEY_TWO)) {
-            brush.setMaterial(Material::Sand);
+            brush.setMaterial(Material::Wood);
         }
         if (IsKeyPressed(KEY_THREE)) {
-            brush.setMaterial(Material::Water);
+            brush.setMaterial(Material::Sand);
         }
         if (IsKeyPressed(KEY_FOUR)) {
-            brush.setMaterial(Material::Oil);
+            brush.setMaterial(Material::Water);
         }
         if (IsKeyPressed(KEY_FIVE)) {
-            brush.setMaterial(Material::Wood);
+            brush.setMaterial(Material::Oil);
         }
         if (IsKeyPressed(KEY_SIX)) {
             brush.setMaterial(Material::Lava);

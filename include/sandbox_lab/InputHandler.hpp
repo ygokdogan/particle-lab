@@ -19,8 +19,7 @@ namespace sandbox {
     public:
         explicit InputHandler(int cellSize);
 
-        InputActions update(Grid &grid, Brush &brush);
-
+        InputActions update(Grid& grid, Brush& brush, int canvasX, int canvasY, bool eraserSelected, bool pointerBlocked = false);
         std::optional<std::pair<int, int>> getHoveredCell() const;
 
     private:
@@ -28,6 +27,7 @@ namespace sandbox {
         std::optional<std::pair<int, int>> previousMouseCell;
         std::optional<std::pair<int, int>> hoveredCell;
         bool previousErasing = false;
+        bool strokeBlocked = false;
 
         InputActions handleSimulationControls();
 
